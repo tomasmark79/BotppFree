@@ -16,11 +16,14 @@ public:
   DiscordBot () = default;
   ~DiscordBot () = default;
 
+  bool startPolling ();
+
   int initCluster ();
   void printFullFeedToChannel (const std::string& url, dpp::snowflake channelId,
                                const dpp::slashcommand_t& event, bool allowEmbedded = true);
   void printRandomFeedToChannel (const std::string& url, dpp::snowflake channelId,
                                  const dpp::slashcommand_t& event, bool allowEmbedded = true);
+
 
   void loadOnSlashCommands ();
   void loadOnReadyCommands ();

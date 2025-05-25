@@ -3,22 +3,50 @@
 #include <IBot/version.h>
 #include <RssReader/RssReader.hpp>
 
-// #include <array>
-// #include <chrono>
-// #include <iostream>
-// #include <sstream>
-// #include <stdexcept>
-// #include <string>
-// #include <thread>
+#include <thread>
+#include <atomic>
 
 #define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.bot++.key"
 const dpp::snowflake channelRss = 1375852042790244352;
+const bool noEmbedded = false;
+
+std::atomic<bool> isPollingRunning (false);
+std::atomic<bool> stopPolling (false);
+// constexpr int pollingIntervalInSec = 30 * 60; // 30 minutes
+constexpr int pollingIntervalInSec = 10;
+
+bool DiscordBot::startPolling () {
+  {
+    std::thread pollingThread ([&] () -> void {
+      while (!stopPolling.load ()) {
+        try {
+          // Pro polling nepoužíváme event.reply, pouze posíláme zprávy do kanálu
+          RssReader rssReader;
+          std::string rssFeed = rssReader.feedFromUrl ("https://www.root.cz/rss/clanky/");
+          if (!rssFeed.empty ()) {
+            dpp::message msg (channelRss, rssFeed);
+            if (noEmbedded) {
+              msg.set_flags (dpp::m_suppress_embeds);
+            }
+            bot_->message_create (msg);
+          }
+          isPollingRunning.store (true);
+        } catch (const std::runtime_error& e) {
+          LOG_E_STREAM << "Error: " << e.what () << std::endl;
+          isPollingRunning.store (false);
+        }
+        std::this_thread::sleep_for (std::chrono::seconds (pollingIntervalInSec));
+      }
+    });
+    pollingThread.detach ();
+  }
+  return true;
+}
 
 /// @brief Initialize the Discord bot cluster.
 /// This function reads the bot token from a file, initializes the bot cluster, sets up logging,
 /// and registers event handlers for slash commands and the ready event.
 /// @return Returns 0 on success, -1 on failure, and -2 if the bot is already initialized.
-
 int DiscordBot::initCluster () {
 
   std::string token;
@@ -49,7 +77,6 @@ int DiscordBot::initCluster () {
   return 0;
 }
 
-const bool noEmbedded = false;
 /// @brief Load on slash commands.
 void DiscordBot::loadOnSlashCommands () {
 
@@ -244,6 +271,8 @@ void DiscordBot::loadOnReadyCommands () {
     bot_->global_command_create (dpp::slashcommand ("bot", "About Bot++!", bot_->me.id));
 
     // clang-format on
+
+    startPolling ();
   });
 }
 
