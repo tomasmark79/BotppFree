@@ -16,25 +16,44 @@ public:
   DiscordBot () = default;
   ~DiscordBot () = default;
 
-  bool startPolling ();
-
+public:
+  /**
+   * @brief Initialize the Discord bot cluster.
+   * @return 0 on success, -1 on failure.
+   */
   int initCluster ();
-  void printFullFeedToChannel (const std::string& url, dpp::snowflake channelId,
-                               const dpp::slashcommand_t& event, bool allowEmbedded = true);
-  void printRandomFeedToChannel (const std::string& url, dpp::snowflake channelId,
-                                 const dpp::slashcommand_t& event, bool allowEmbedded = true);
 
+  /**
+   * @brief Get the bot instance.
+   * @return A reference to the bot instance.
+   */
+  dpp::cluster& getBot () {
+    return *bot_;
+  }
 
-  void loadOnSlashCommands ();
-  void loadOnReadyCommands ();
-
-  // std::string getBotNameAndVersion ();
-  std::string getLinuxFastfetchCpp ();
-
-  int getTokenFromFile (std::string& token);
+  /**
+   * @brief Get the bot instance (const version).
+   * @return A const reference to the bot instance.
+   */
+  const dpp::cluster& getBot () const {
+    return *bot_;
+  }
 
 private:
+  std::string getLinuxFastfetchCpp ();
   std::unique_ptr<dpp::cluster> bot_;
+  bool startPolling ();
+  void loadOnSlashCommands ();
+  void loadOnReadyCommands ();
+  int getTokenFromFile (std::string& token);
+  void printFullFeedToChannel (const std::string& url, dpp::snowflake channelId,
+                               const dpp::slashcommand_t& event, bool allowEmbedded);
+  void printRandomFeedToChannel (const std::string& url, dpp::snowflake channelId,
+                                 const dpp::slashcommand_t& event, bool allowEmbedded);
+  void sendRssFeedViaReply (const std::string& url, const dpp::slashcommand_t& event,
+                            bool allowEmbedded, bool fullFeed);
+  void sendRssFeedToChannel (const std::string& url, dpp::snowflake channelId, bool allowEmbedded,
+                             bool fullFeed);
 };
 
 #endif

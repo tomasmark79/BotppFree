@@ -12,24 +12,21 @@ const bool noEmbedded = false;
 
 std::atomic<bool> isPollingRunning (false);
 std::atomic<bool> stopPolling (false);
-// constexpr int pollingIntervalInSec = 30 * 60; // 30 minutes
-constexpr int pollingIntervalInSec = 10;
+int pollingIntervalInSec = 30 * 60; // 30 minutes
+// int pollingIntervalInSec = 30;
 
+/// @brief Thread function to start polling for RSS feeds.
+/// This function runs in a separate thread and continuously fetches RSS feeds at specified intervals.
+/// It checks the stopPolling atomic variable to determine when to stop polling.
+/// If an error occurs during polling, it logs the error and sets isPollingRunning to false.
+/// @return Returns true if polling started successfully, false otherwise.
 bool DiscordBot::startPolling () {
   {
     std::thread pollingThread ([&] () -> void {
       while (!stopPolling.load ()) {
         try {
           // Pro polling nepoužíváme event.reply, pouze posíláme zprávy do kanálu
-          RssReader rssReader;
-          std::string rssFeed = rssReader.feedFromUrl ("https://www.root.cz/rss/clanky/");
-          if (!rssFeed.empty ()) {
-            dpp::message msg (channelRss, rssFeed);
-            if (noEmbedded) {
-              msg.set_flags (dpp::m_suppress_embeds);
-            }
-            bot_->message_create (msg);
-          }
+          sendRssFeedToChannel ("https://www.root.cz/rss/clanky/", channelRss, true, false);
           isPollingRunning.store (true);
         } catch (const std::runtime_error& e) {
           LOG_E_STREAM << "Error: " << e.what () << std::endl;
@@ -163,6 +160,18 @@ void DiscordBot::loadOnSlashCommands () {
                               noEmbedded);
     }
 
+    // set-pollinginterval
+    if (event.command.get_command_name () == "set-pollinginterval") {
+      if (std::holds_alternative<int64_t> (event.get_parameter ("interval"))) {
+        pollingIntervalInSec
+            = static_cast<int> (std::get<int64_t> (event.get_parameter ("interval")));
+        event.reply ("Polling interval set to " + std::to_string (pollingIntervalInSec)
+                     + " seconds.");
+      } else {
+        event.reply ("Invalid interval parameter. Please provide an integer value.");
+      }
+    }
+
     // rss
     if (event.command.get_command_name () == "rss") {
       event.reply ("Bot++ podporuje RSS 1.0 (RDF) format a RSS 2.0 format.\n"
@@ -255,6 +264,23 @@ void DiscordBot::loadOnReadyCommands () {
     bot_->global_command_create (dpp::slashcommand ("abcfaq", "Často kladené dotazy!", bot_->me.id));
     bot_->global_command_create (dpp::slashcommand ("abcovladace", "Ovladače!", bot_->me.id));
 
+    // set-pollinginterval
+    bot_->global_command_create (
+        dpp::slashcommand ("set-pollinginterval",
+                           "Set the polling interval for RSS feeds in seconds (default: 1800 seconds).",
+                           bot_->me.id)
+            .add_option (
+                dpp::command_option (dpp::co_integer, "seconds", "Polling interval in seconds", true)
+            )
+    );
+
+    // get-pollinginterval
+    bot_->global_command_create (
+        dpp::slashcommand ("get-pollinginterval",
+                           "Get the current polling interval for RSS feeds.", bot_->me.id)
+    );
+    
+    
     // rss
     bot_->global_command_create (dpp::slashcommand ("rss", "About RSS Support!", bot_->me.id));
 
@@ -301,49 +327,104 @@ std::string DiscordBot::getLinuxFastfetchCpp () {
   return result.str ();
 }
 
-/// @brief Print the full RSS feed to a specified Discord channel.
-/// This function fetches the RSS feed from the provided URL and sends it as a message to the specified channel.
-/// If the feed cannot be fetched, it sends an error message.
-/// @param url The URL of the RSS feed.
-/// @param channelId The ID of the Discord channel where the feed will be sent.
-void DiscordBot::printFullFeedToChannel (const std::string& url, dpp::snowflake channelId,
-                                         const dpp::slashcommand_t& event, bool allowEmbedded) {
+/// @brief Send RSS feed via slash command reply
+/// @param url RSS feed URL
+/// @param event Slash command event
+/// @param allowEmbedded Whether to allow Discord embeds
+/// @param fullFeed If true, sends full feed; if false, sends random item
+void DiscordBot::sendRssFeedViaReply (const std::string& url, const dpp::slashcommand_t& event,
+                                      bool allowEmbedded, bool fullFeed) {
   RssReader rssReader;
-  std::string rssFeed = rssReader.feedFromUrl (url);
+  std::string rssFeed = fullFeed ? rssReader.feedFromUrl (url) : rssReader.feedRandomFromUrl (url);
+
   if (rssFeed.empty ()) {
-    bot_->message_create (
-        dpp::message (channelId, "Failed to fetch RSS feed. Please try again later."));
+    event.reply ("Failed to fetch RSS feed. Please try again later.");
   } else {
-    dpp::message msg (channelId, rssFeed);
+    dpp::message msg (event.command.channel_id, rssFeed);
     if (!allowEmbedded) {
-      msg.set_flags (dpp::m_suppress_embeds); // Suppress embeds if allowEmbedded is false
+      msg.set_flags (dpp::m_suppress_embeds);
     }
-    bot_->message_create (msg);
     event.reply (msg);
   }
 }
 
-/// @brief Print a random item from the RSS feed to a specified Discord channel.
-/// This function fetches a random item from the RSS feed at the provided URL and sends it as a message
-/// to the specified channel. If the feed cannot be fetched, it sends an error message.
-/// @param url The URL of the RSS feed from which a random item will be fetched.
-/// @param channelId The ID of the Discord channel where the random item will be sent.
-void DiscordBot::printRandomFeedToChannel (const std::string& url, dpp::snowflake channelId,
-                                           const dpp::slashcommand_t& event, bool allowEmbedded) {
+/// @brief Send RSS feed via direct message to channel
+/// @param url RSS feed URL
+/// @param channelId Target channel ID
+/// @param allowEmbedded Whether to allow Discord embeds
+/// @param fullFeed If true, sends full feed; if false, sends random item
+void DiscordBot::sendRssFeedToChannel (const std::string& url, dpp::snowflake channelId,
+                                       bool allowEmbedded, bool fullFeed) {
   RssReader rssReader;
-  std::string rssFeed = rssReader.feedRandomFromUrl (url);
+  std::string rssFeed = fullFeed ? rssReader.feedFromUrl (url) : rssReader.feedRandomFromUrl (url);
+
   if (rssFeed.empty ()) {
     bot_->message_create (
         dpp::message (channelId, "Failed to fetch RSS feed. Please try again later."));
   } else {
     dpp::message msg (channelId, rssFeed);
-    bot_->message_create (msg);
     if (!allowEmbedded) {
-      msg.set_flags (dpp::m_suppress_embeds); // Suppress embeds if allowEmbedded is false
+      msg.set_flags (dpp::m_suppress_embeds);
     }
-    event.reply (msg);
+    bot_->message_create (msg);
   }
 }
+
+/// @brief Print the full RSS feed to a specified Discord channel.
+void DiscordBot::printFullFeedToChannel (const std::string& url, dpp::snowflake channelId,
+                                         const dpp::slashcommand_t& event, bool allowEmbedded) {
+  sendRssFeedViaReply (url, event, allowEmbedded, true);
+}
+
+/// @brief Print a random item from the RSS feed to a specified Discord channel.
+void DiscordBot::printRandomFeedToChannel (const std::string& url, dpp::snowflake channelId,
+                                           const dpp::slashcommand_t& event, bool allowEmbedded) {
+  sendRssFeedViaReply (url, event, allowEmbedded, false);
+}
+
+// /// @brief Print the full RSS feed to a specified Discord channel.
+// /// This function fetches the RSS feed from the provided URL and sends it as a message to the specified channel.
+// /// If the feed cannot be fetched, it sends an error message.
+// /// @param url The URL of the RSS feed.
+// /// @param channelId The ID of the Discord channel where the feed will be sent.
+// void DiscordBot::printFullFeedToChannel (const std::string& url, dpp::snowflake channelId,
+//                                          const dpp::slashcommand_t& event, bool allowEmbedded) {
+//   RssReader rssReader;
+//   std::string rssFeed = rssReader.feedFromUrl (url);
+//   if (rssFeed.empty ()) {
+//     bot_->message_create (
+//         dpp::message (channelId, "Failed to fetch RSS feed. Please try again later."));
+//   } else {
+//     dpp::message msg (channelId, rssFeed);
+//     if (!allowEmbedded) {
+//       msg.set_flags (dpp::m_suppress_embeds); // Suppress embeds if allowEmbedded is false
+//     }
+//     bot_->message_create (msg);
+//     event.reply (msg);
+//   }
+// }
+
+// /// @brief Print a random item from the RSS feed to a specified Discord channel.
+// /// This function fetches a random item from the RSS feed at the provided URL and sends it as a message
+// /// to the specified channel. If the feed cannot be fetched, it sends an error message.
+// /// @param url The URL of the RSS feed from which a random item will be fetched.
+// /// @param channelId The ID of the Discord channel where the random item will be sent.
+// void DiscordBot::printRandomFeedToChannel (const std::string& url, dpp::snowflake channelId,
+//                                            const dpp::slashcommand_t& event, bool allowEmbedded) {
+//   RssReader rssReader;
+//   std::string rssFeed = rssReader.feedRandomFromUrl (url);
+//   if (rssFeed.empty ()) {
+//     bot_->message_create (
+//         dpp::message (channelId, "Failed to fetch RSS feed. Please try again later."));
+//   } else {
+//     dpp::message msg (channelId, rssFeed);
+//     bot_->message_create (msg);
+//     if (!allowEmbedded) {
+//       msg.set_flags (dpp::m_suppress_embeds); // Suppress embeds if allowEmbedded is false
+//     }
+//     event.reply (msg);
+//   }
+// }
 
 int DiscordBot::getTokenFromFile (std::string& token) {
   std::ifstream tokenFile (DISCORD_OAUTH_TOKEN_FILE);
