@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <title>Digitalspace.name</title>
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #111;
+      }
+      body {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        align-items: stretch;
+        justify-content: stretch;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+        background: #222;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas" tabindex="-1"></canvas>
+    <script type="text/javascript">
+      var canvas = document.getElementById('canvas');
+      function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas();
+
+      var Module = {
+        canvas: canvas
+      };
+    </script>
+    {{{ SCRIPT }}}
+  </body>
+</html>
