@@ -10,10 +10,11 @@
 const dpp::snowflake channelRss = 1375852042790244352;
 const bool noEmbedded = false;
 
+std::atomic<bool> isRootOnTheLine (false);
 std::atomic<bool> isPollingRunning (false);
 std::atomic<bool> stopPolling (false);
-int pollingIntervalInSec = 30 * 60; // 30 minutes
-// int pollingIntervalInSec = 30;
+int pollingIntervalInSec = 60 * 60; // Default polling interval set to 45 minutes
+// int pollingIntervalInSec = 10;
 
 /// @brief Thread function to start polling for RSS feeds.
 /// This function runs in a separate thread and continuously fetches RSS feeds at specified intervals.
@@ -25,8 +26,13 @@ bool DiscordBot::startPolling () {
     std::thread pollingThread ([&] () -> void {
       while (!stopPolling.load ()) {
         try {
-          // Pro polling nepoužíváme event.reply, pouze posíláme zprávy do kanálu
-          sendRssFeedToChannel ("https://www.root.cz/rss/clanky/", channelRss, true, false);
+          if (isRootOnTheLine.load ()) {
+            sendRssFeedToChannel ("https://www.root.cz/rss/clanky/", channelRss, false, false);
+            isRootOnTheLine.store (false);
+          } else {
+            sendRssFeedToChannel ("https://www.abclinuxu.cz/auto/abc.rss", channelRss, false, false);
+            isRootOnTheLine.store (true);
+          }
           isPollingRunning.store (true);
         } catch (const std::runtime_error& e) {
           LOG_E_STREAM << "Error: " << e.what () << std::endl;
