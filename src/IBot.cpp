@@ -49,7 +49,6 @@ namespace dotname {
       // } else {
       //   LOG_I_STREAM << "Fetched RSS feed successfully:\n" << rssFeed2 << std::endl;
       // }
-
     }
   }
 

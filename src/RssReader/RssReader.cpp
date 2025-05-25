@@ -173,7 +173,7 @@ std::string RssReader::feedRandomFromUrl (std::string url, int rssType) {
         size_t randomIndex = dis (gen);
 
         const RSSItem& item = localFeed.getItems ()[randomIndex];
-        
+
         LOG_I_STREAM << "Random item: " << item.title << std::endl;
         LOG_I_STREAM << "Link: " << item.link << std::endl;
         msg = "[" + item.title + "](" + item.link + ")\n";

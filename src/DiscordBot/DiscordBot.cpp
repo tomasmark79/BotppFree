@@ -3,202 +3,255 @@
 #include <IBot/version.h>
 #include <RssReader/RssReader.hpp>
 
-#include <array>
-#include <chrono>
-#include <iostream>
-#include <sstream>
-#include <stdexcept>
-#include <string>
-#include <thread>
+// #include <array>
+// #include <chrono>
+// #include <iostream>
+// #include <sstream>
+// #include <stdexcept>
+// #include <string>
+// #include <thread>
 
 #define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.bot++.key"
 const dpp::snowflake channelRss = 1375852042790244352;
 
-std::string DiscordBot::getBotNameAndVersion () {
-  return std::string ("Bot++ " + std::string (IBOT_VERSION) + " 👾 ") + DPP_VERSION_TEXT
-         + " loaded.\nInitial development D🌀tName 2025\nCreated with 🩵 for all Linux enthusiast "
-           "🐧";
-}
-
-bool DiscordBot::getToken (std::string& token, const std::filesystem::path& filePath) {
-  std::ifstream file (filePath);
-  if (!file.is_open ()) {
-    LOG_E_STREAM << "Error: Could not open file " << filePath << std::endl;
-    return false;
-  }
-  std::getline (file, token);
-  file.close ();
-  if (token.empty ()) {
-    LOG_E_STREAM << "Error: Token is empty" << std::endl;
-    return false;
-  }
-  return true;
-}
+/// @brief Initialize the Discord bot cluster.
+/// This function reads the bot token from a file, initializes the bot cluster, sets up logging,
+/// and registers event handlers for slash commands and the ready event.
+/// @return Returns 0 on success, -1 on failure, and -2 if the bot is already initialized.
 
 int DiscordBot::initCluster () {
+
   std::string token;
-  if (getToken (token, DISCORD_OAUTH_TOKEN_FILE)) {
-    try {
-      if (bot_) {
-        LOG_E_STREAM << "Bot is already initialized!" << std::endl;
-        return -2;
-      }
+  if (this->getTokenFromFile (token) != 0) {
+    LOG_E_STREAM << "Failed to read token from file: " << DISCORD_OAUTH_TOKEN_FILE << std::endl;
+    return -1;
+  }
 
-      // RedHats childs needs for failed ssl contexts in
-      // in /etc/ssl/openssl.cnf
-      // https://github.com/openssl/openssl/discussions/23016
-      // config_diagnostics = 1 to config_diagnostics = 0
+  try {
+    DiscordBot::bot_
+        = std::make_unique<dpp::cluster> (token, dpp::i_default_intents | dpp::i_message_content);
 
-      DiscordBot::bot_
-          = std::make_unique<dpp::cluster> (token, dpp::i_default_intents | dpp::i_message_content);
+    bot_->log (dpp::ll_debug, "Bot++");
 
-      bot_->log (dpp::ll_debug, "Bot++");
+    bot_->on_log ([&] (const dpp::log_t& log) {
+      LOG_D_STREAM << "[" << dpp::utility::current_date_time () << "] "
+                   << dpp::utility::loglevel (log.severity) << ": " << log.message << std::endl;
+    });
 
-      std::string message = "Initializing Discord bot";
-      dpp::message msg (channelRss, message);
-      bot_->message_create (msg);
-      LOG_I_STREAM << message << std::endl;
+    loadOnSlashCommands ();
+    loadOnReadyCommands ();
 
-      getBotNameAndVersion ();
-      loadVariousBotCommands ();
-
-      bot_->start (dpp::st_wait);
-
-    } catch (const std::exception& e) {
-      LOG_E_STREAM << "Exception during bot initialization: " << e.what () << std::endl;
-      return -1;
-    }
+    bot_->start (dpp::st_wait);
+  } catch (const std::exception& e) {
+    LOG_E_STREAM << "Exception during bot initialization: " << e.what () << std::endl;
+    return -1;
   }
   return 0;
 }
 
-void DiscordBot::loadVariousBotCommands () {
-
-  bot_->on_log ([&] (const dpp::log_t& log) {
-    LOG_D_STREAM << "[" << dpp::utility::current_date_time () << "] "
-                 << dpp::utility::loglevel (log.severity) << ": " << log.message << std::endl;
-  });
+const bool noEmbedded = false;
+/// @brief Load on slash commands.
+void DiscordBot::loadOnSlashCommands () {
 
   bot_->on_slashcommand ([&, this] (const dpp::slashcommand_t& event) {
-    if (event.command.get_command_name () == "randomroot") {
-      RssReader rssReader;
-      std::string rssFeed = rssReader.feedRandomFromUrl ("https://www.root.cz/rss/clanky/");
-      if (rssFeed.empty ()) {
-        event.reply ("Failed to fetch RSS feed. Please try again later.");
-      } else {
-        dpp::message msg (channelRss, rssFeed);
-        event.reply (msg);
-        bot_->message_create (msg);
-      }
+    // random
+    // if (event.command.get_command_name () == "randomroot") {
+    //   printRandomFeedToChannel ("https://www.root.cz/rss/clanky/", channelRss, event);
+    // }
+    // if (event.command.get_command_name () == "randomabc") {
+    //   printRandomFeedToChannel ("https://www.abclinuxu.cz/auto/abc.rss", channelRss, event);
+    // }
+    // root.cz
+    if (event.command.get_command_name () == "rootclanky") {
+      printFullFeedToChannel ("https://www.root.cz/rss/clanky/", channelRss, event, noEmbedded);
+    }
+    if (event.command.get_command_name () == "rootclanek") {
+      printRandomFeedToChannel ("https://www.root.cz/rss/clanky/", channelRss, event, noEmbedded);
+    }
+    if (event.command.get_command_name () == "rootzpravicky") {
+      printFullFeedToChannel ("https://www.root.cz/rss/zpravicky/", channelRss, event, noEmbedded);
+    }
+    if (event.command.get_command_name () == "rootzpravicka") {
+      printRandomFeedToChannel ("https://www.root.cz/rss/zpravicky/", channelRss, event,
+                                noEmbedded);
+    }
+    if (event.command.get_command_name () == "rootknihy") {
+      printFullFeedToChannel ("https://www.root.cz/rss/knihy/", channelRss, event, noEmbedded);
+    }
+    if (event.command.get_command_name () == "rootkniha") {
+      printRandomFeedToChannel ("https://www.root.cz/rss/knihy/", channelRss, event, noEmbedded);
+    }
+    if (event.command.get_command_name () == "rootblogy") {
+      printFullFeedToChannel ("https://blog.root.cz/rss/", channelRss, event, noEmbedded);
+    }
+    if (event.command.get_command_name () == "rootblog") {
+      printRandomFeedToChannel ("https://blog.root.cz/rss/", channelRss, event, noEmbedded);
+    }
+    if (event.command.get_command_name () == "rootskoleni") {
+      printFullFeedToChannel ("https://www.root.cz/rss/skoleni", channelRss, event, noEmbedded);
     }
 
-    if (event.command.get_command_name () == "randomabc") {
-      RssReader rssReader;
-      std::string rssFeed = rssReader.feedRandomFromUrl ("www.abclinuxu.cz/auto/abc.rss", 1);
-      if (rssFeed.empty ()) {
-        event.reply ("Failed to fetch RSS feed. Please try again later.");
-      } else {
-        dpp::message msg (channelRss, rssFeed);
-        event.reply (msg);
-        bot_->message_create (msg);
-      }
+    // abclinuxu.cz
+    if (event.command.get_command_name () == "abcclanky") {
+      printFullFeedToChannel ("https://www.abclinuxu.cz/auto/abc.rss", channelRss, event,
+                              noEmbedded);
+    }
+    if (event.command.get_command_name () == "abcotazky") {
+      printFullFeedToChannel ("https://www.abclinuxu.cz/auto/diskuse.rss", channelRss, event,
+                              noEmbedded);
+    }
+    if (event.command.get_command_name () == "abchw") {
+      printFullFeedToChannel ("https://www.abclinuxu.cz/auto/hardware.rss", channelRss, event,
+                              noEmbedded);
+    }
+    if (event.command.get_command_name () == "abcsw") {
+      printFullFeedToChannel ("https://www.abclinuxu.cz/auto/software.rss", channelRss, event,
+                              noEmbedded);
+    }
+    if (event.command.get_command_name () == "abczpravicky") {
+      printFullFeedToChannel ("https://www.abclinuxu.cz/auto/zpravicky.rss", channelRss, event,
+                              noEmbedded);
+    }
+    if (event.command.get_command_name () == "abcpojmy") {
+      printFullFeedToChannel ("https://www.abclinuxu.cz/auto/slovnik.rss", channelRss, event,
+                              noEmbedded);
+    }
+    if (event.command.get_command_name () == "abcosobnosti") {
+      printFullFeedToChannel ("https://www.abclinuxu.cz/auto/kdojekdo.rss", channelRss, event,
+                              noEmbedded);
+    }
+    if (event.command.get_command_name () == "abczapisky") {
+      printFullFeedToChannel ("https://www.abclinuxu.cz/auto/blog.rss", channelRss, event,
+                              noEmbedded);
+    }
+    if (event.command.get_command_name () == "abclzapisky") {
+      printFullFeedToChannel ("https://www.abclinuxu.cz/auto/blogDigest.rss", channelRss, event,
+                              noEmbedded);
+    }
+    if (event.command.get_command_name () == "abcfaq") {
+      printFullFeedToChannel ("https://www.abclinuxu.cz/auto/faq.rss", channelRss, event, false);
+    }
+    if (event.command.get_command_name () == "abcovladace") {
+      printFullFeedToChannel ("https://www.abclinuxu.cz/auto/ovladace.rss", channelRss, event,
+                              noEmbedded);
     }
 
+    // rss
     if (event.command.get_command_name () == "rss") {
-      RssReader rssReader;
-      std::string rssFeed = rssReader.feedFromUrl ("https://www.root.cz/rss/clanky/");
-      if (rssFeed.empty ()) {
-        event.reply ("Failed to fetch RSS feed. Please try again later.");
-      } else {
-        dpp::message msg (channelRss, rssFeed);
-        event.reply (msg);
-        bot_->message_create (msg);
-      }
+      event.reply ("Bot++ podporuje RSS 1.0 (RDF) format a RSS 2.0 format.\n"
+                   "Pro více informací navštivte: https://www.w3.org/2001/sw/Activity.html#RDF\n"
+                   "Pro více informací navštivte: https://www.rssboard.org/rss-specification");
     }
 
+    // ping pong
     if (event.command.get_command_name () == "ping") {
       event.reply ("Pong! 🏓");
     }
-
+    // pong ping
     if (event.command.get_command_name () == "pong") {
       event.reply ("Ping! 🏓");
     }
-
+    // gang
     if (event.command.get_command_name () == "gang") {
       dpp::message msg (event.command.channel_id, "Bang bang! 💥💥");
       event.reply (msg);
       bot_->message_create (msg);
     }
-
+    // bot info
     if (event.command.get_command_name () == "bot") {
-      std::string botInfo = getBotNameAndVersion () + "\n"
-                            + this->getLinuxFastfetchCpp ().substr (0, 8192 - 2) + "\n";
-      dpp::message msg (channelRss, botInfo);
+      dpp::embed embed
+          = dpp::embed ()
+                .set_color (dpp::colors::sti_blue)
+                .set_title ("TuX++ "
+                            + std::string (IBOT_VERSION + std::string (" 🐧 ") + DPP_VERSION_TEXT
+                                           + " loaded"))
+                .set_url ("https://github.com/tomasmark79/BotppFree")
+                .set_author ("D🌀tName", "https://digitalspace.name",
+                             "https://digitalspace.name/avatar/avatarpix.png")
+                .set_description (this->getLinuxFastfetchCpp ().substr (0, 8192 - 2) + "\n")
+                .set_thumbnail ("https://digitalspace.name/avatar/Linux-Logo-1996-present.png")
+                .add_field (
+                    "Další informace",
+                    "Operační systém Linux používá Linux kernel, který vychází z myšlenek Unixu "
+                    "a respektuje příslušné standardy POSIX a Single UNIX Specification.")
+                //.add_field ("🩵🩵", "🩵🩵", true)
+                //.add_field ("🩵🩵", "🩵🩵", true)
+                .set_image ("https://digitalspace.name/avatar/Linux-Logo-1996-present.png")
+                .set_footer (dpp::embed_footer ()
+                                 .set_text ("Ve spolupráci s Delirium")
+                                 .set_icon ("https://digitalspace.name/avatar/Delirium.png"))
+                .set_timestamp (time (0));
+
+      /* Create a message with the content as our new embed. */
+      dpp::message msg (event.command.channel_id, embed);
+
+      /* Reply to the user with the message, containing our embed. */
       event.reply (msg);
     }
   });
+}
 
+/// @brief Load commands to be executed when the bot is ready.
+void DiscordBot::loadOnReadyCommands () {
   bot_->on_ready ([&] (const dpp::ready_t& event) {
-    bot_->global_command_create (dpp::slashcommand ("randomroot", "Get news!", bot_->me.id));
-    
-    
-    bot_->global_command_create (dpp::slashcommand ("randomabc", "Get news!", bot_->me.id));
+    // clang-format off
 
-    // bot_->global_command_create (dpp::slashcommand ("abcclanky", "Články!", bot_->me.id));
-    // bot_->global_command_create (dpp::slashcommand ("abcotazky", "Otázky v poradně!", bot_->me.id));
-    // bot_->global_command_create (dpp::slashcommand ("abchw", "Hardwarové záznamy!", bot_->me.id));
-    // bot_->global_command_create (dpp::slashcommand ("abcsw", "Softwarové záznamy!", bot_->me.id));
-    // bot_->global_command_create (dpp::slashcommand ("abczpravicky", "Zprávičky!", bot_->me.id));
-    // bot_->global_command_create (dpp::slashcommand ("abcpojmy", "Slovníkové pojmy!", bot_->me.id));
-    // bot_->global_command_create (dpp::slashcommand ("abcosobnosti", "Osobnosti (Kdo je)!", bot_->me.id));
-    // bot_->global_command_create (dpp::slashcommand ("abczapisky", "Blogové zápisky!", bot_->me.id));
-    // bot_->global_command_create (dpp::slashcommand ("abclzapisky", "Linuxové blogové zápisky!", bot_->me.id));
-    // bot_->global_command_create (dpp::slashcommand ("abcfaq", "Často kladené dotazy!", bot_->me.id));
-    // bot_->global_command_create (dpp::slashcommand ("abcovladace", "Ovladače!", bot_->me.id));
+    // random
+    // bot_->global_command_create (dpp::slashcommand ("randomroot", "Get news!", bot_->me.id));
+    // bot_->global_command_create (dpp::slashcommand ("randomabc", "Get news!", bot_->me.id));
 
-// Články
-//     www.abclinuxu.cz/auto/abc.rss
-// Otázky v poradně (včetně počtu odpovědí)
-//     www.abclinuxu.cz/auto/diskuse.rss
-// Hardwarové záznamy
-//     www.abclinuxu.cz/auto/hardware.rss
-// Softwarové záznamy
-//     www.abclinuxu.cz/auto/software.rss
-// Zprávičky
-//     www.abclinuxu.cz/auto/zpravicky.rss
-// Slovníkové pojmy
-//     www.abclinuxu.cz/auto/slovnik.rss
-// Osobnosti (Kdo je)
-//     www.abclinuxu.cz/auto/kdojekdo.rss
-// Blogové zápisky
-//     www.abclinuxu.cz/auto/blog.rss
-// Linuxové blogové zápisky
-//     www.abclinuxu.cz/auto/blogDigest.rss
-// FAQ (často kladené dotazy)
-//     www.abclinuxu.cz/auto/faq.rss
-// Ankety
-//     www.abclinuxu.cz/auto/ankety.rss
-// Inzeráty v bazaru
-//     www.abclinuxu.cz/auto/bazar.rss
-// Ovladače
-//     www.abclinuxu.cz/auto/ovladace.rss 
+    // root.cz
+    bot_->global_command_create (dpp::slashcommand ("rootclanky", "Aktuální články na Rootu!", bot_->me.id));
+    bot_->global_command_create (dpp::slashcommand ("rootclanek", "Náhodný článek na Rootu!", bot_->me.id));
     
-    bot_->global_command_create (dpp::slashcommand ("rss", "Get news!", bot_->me.id));
+    bot_->global_command_create (dpp::slashcommand ("rootzpravicky", "Aktuální zprávičky na Rootu!", bot_->me.id));
+    bot_->global_command_create (dpp::slashcommand ("rootzpravicka", "Náhodná zprávička na Rootu!", bot_->me.id));
+    
+    bot_->global_command_create (dpp::slashcommand ("rootknihy", "Knihovna na knihy.root.cz!", bot_->me.id));
+    bot_->global_command_create (dpp::slashcommand ("rootkniha", "Náhodná kniha na knihy.root.cz!", bot_->me.id));
+    
+    bot_->global_command_create (dpp::slashcommand ("rootblogy", "Aktuální blogy na Rootu!", bot_->me.id));
+    bot_->global_command_create (dpp::slashcommand ("rootblog", "Náhodný blog na Rootu!", bot_->me.id));
 
-    /* ping */
+    bot_->global_command_create (dpp::slashcommand ("rootskoleni", "Připravovaná školení!", bot_->me.id));
+    
+    // abclinuxu.cz
+    bot_->global_command_create (dpp::slashcommand ("abcclanky", "Články!", bot_->me.id));
+    bot_->global_command_create (dpp::slashcommand ("abcotazky", "Otázky v poradně!", bot_->me.id));
+    bot_->global_command_create (dpp::slashcommand ("abchw", "Hardwarové záznamy!", bot_->me.id));
+    bot_->global_command_create (dpp::slashcommand ("abcsw", "Softwarové záznamy!", bot_->me.id));
+    bot_->global_command_create (dpp::slashcommand ("abczpravicky", "Zprávičky!", bot_->me.id));
+    bot_->global_command_create (dpp::slashcommand ("abcpojmy", "Slovníkové pojmy!", bot_->me.id));
+    bot_->global_command_create (dpp::slashcommand ("abcosobnosti", "Osobnosti (Kdo je)!", bot_->me.id));
+    bot_->global_command_create (dpp::slashcommand ("abczapisky", "Blogové zápisky!", bot_->me.id));
+    bot_->global_command_create (dpp::slashcommand ("abclzapisky", "Linuxové blogové zápisky!", bot_->me.id));
+    bot_->global_command_create (dpp::slashcommand ("abcfaq", "Často kladené dotazy!", bot_->me.id));
+    bot_->global_command_create (dpp::slashcommand ("abcovladace", "Ovladače!", bot_->me.id));
+
+    // rss
+    bot_->global_command_create (dpp::slashcommand ("rss", "About RSS Support!", bot_->me.id));
+
+    // ping pong
     bot_->global_command_create (dpp::slashcommand ("ping", "Ping pong!", bot_->me.id));
 
-    /* pong */
+    // pong ping
     bot_->global_command_create (dpp::slashcommand ("pong", "Pong ping!", bot_->me.id));
 
-    /* gang */
+    // gang
     bot_->global_command_create (dpp::slashcommand ("gang", "Will shoot!", bot_->me.id));
 
-    /* bot */
+    // bot info
     bot_->global_command_create (dpp::slashcommand ("bot", "About Bot++!", bot_->me.id));
+
+    // clang-format on
   });
 }
 
+/// @brief Get Linux system information using fastfetch command.
+/// This function executes the `fastfetch` command with a specific configuration file and captures
+/// the output. It returns the output as a string.
+/// @note The command used is `fastfetch -c archey.jsonc --pipe --logo none`.
+/// @return A string containing the output of the `fastfetch` command.
 std::string DiscordBot::getLinuxFastfetchCpp () {
   constexpr size_t bufferSize = 2000;
   std::stringstream result;
@@ -217,4 +270,63 @@ std::string DiscordBot::getLinuxFastfetchCpp () {
   }
 
   return result.str ();
+}
+
+/// @brief Print the full RSS feed to a specified Discord channel.
+/// This function fetches the RSS feed from the provided URL and sends it as a message to the specified channel.
+/// If the feed cannot be fetched, it sends an error message.
+/// @param url The URL of the RSS feed.
+/// @param channelId The ID of the Discord channel where the feed will be sent.
+void DiscordBot::printFullFeedToChannel (const std::string& url, dpp::snowflake channelId,
+                                         const dpp::slashcommand_t& event, bool allowEmbedded) {
+  RssReader rssReader;
+  std::string rssFeed = rssReader.feedFromUrl (url);
+  if (rssFeed.empty ()) {
+    bot_->message_create (
+        dpp::message (channelId, "Failed to fetch RSS feed. Please try again later."));
+  } else {
+    dpp::message msg (channelId, rssFeed);
+    if (!allowEmbedded) {
+      msg.set_flags (dpp::m_suppress_embeds); // Suppress embeds if allowEmbedded is false
+    }
+    bot_->message_create (msg);
+    event.reply (msg);
+  }
+}
+
+/// @brief Print a random item from the RSS feed to a specified Discord channel.
+/// This function fetches a random item from the RSS feed at the provided URL and sends it as a message
+/// to the specified channel. If the feed cannot be fetched, it sends an error message.
+/// @param url The URL of the RSS feed from which a random item will be fetched.
+/// @param channelId The ID of the Discord channel where the random item will be sent.
+void DiscordBot::printRandomFeedToChannel (const std::string& url, dpp::snowflake channelId,
+                                           const dpp::slashcommand_t& event, bool allowEmbedded) {
+  RssReader rssReader;
+  std::string rssFeed = rssReader.feedRandomFromUrl (url);
+  if (rssFeed.empty ()) {
+    bot_->message_create (
+        dpp::message (channelId, "Failed to fetch RSS feed. Please try again later."));
+  } else {
+    dpp::message msg (channelId, rssFeed);
+    bot_->message_create (msg);
+    if (!allowEmbedded) {
+      msg.set_flags (dpp::m_suppress_embeds); // Suppress embeds if allowEmbedded is false
+    }
+    event.reply (msg);
+  }
+}
+
+int DiscordBot::getTokenFromFile (std::string& token) {
+  std::ifstream tokenFile (DISCORD_OAUTH_TOKEN_FILE);
+  if (!tokenFile.is_open ()) {
+    LOG_E_STREAM << "Failed to open token file: " << DISCORD_OAUTH_TOKEN_FILE << std::endl;
+    return -1;
+  }
+  std::getline (tokenFile, token);
+  tokenFile.close ();
+  if (token.empty ()) {
+    LOG_E_STREAM << "Token file is empty or invalid." << std::endl;
+    return -1;
+  }
+  return 0;
 }
