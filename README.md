@@ -8,4 +8,11 @@ Discord bot pro český Discord Server Linux CZ/SK
 
 [Pozvánka ZDE](https://discord.gg/MBuvrRWQR6)
 
+### ToDo
+
+ - vytvořit datastrukturu zásobník pro záznamy a díky tomu nezobrazovat již zobrazené články
+ - definovat configuraci rss vstupů v json
+
+ ---
+
 BotppFree is proudly built with **[D🌀tName C++ Template](https://github.com/tomasmark79/DotNameCppFree)**.
