@@ -27,10 +27,12 @@ bool DiscordBot::startPolling () {
       while (!stopPolling.load ()) {
         try {
           if (isRootOnTheLine.load ()) {
-            sendRssFeedToChannel ("https://www.root.cz/rss/clanky/", channelRss, false, false);
+            sendRssFeedToChannel ("https://www.root.cz/rss/clanky/", channelRss, !noEmbedded,
+                                  false);
             isRootOnTheLine.store (false);
           } else {
-            sendRssFeedToChannel ("https://www.abclinuxu.cz/auto/abc.rss", channelRss, false, false);
+            sendRssFeedToChannel ("https://www.abclinuxu.cz/auto/abc.rss", channelRss, noEmbedded,
+                                  false);
             isRootOnTheLine.store (true);
           }
           isPollingRunning.store (true);
