@@ -15,7 +15,7 @@ std::atomic<bool> isPollingPrintFeedRunning (false);
 std::atomic<bool> stopPollingPrintFeed (false);
 //int pollingPrintFeedIntervalInSec = 60 * 47;
 
-int pollingPrintFeedIntervalInSec = 2; // test purpose
+int pollingPrintFeedIntervalInSec = 5; // test purpose
 
 bool DiscordBot::startPollingPrintFeed () {
   {
@@ -25,13 +25,16 @@ bool DiscordBot::startPollingPrintFeed () {
           RssManager rssManager;
           RSSItem randomItem = rssManager.getRandomItem ();
           if (!randomItem.title_.empty ()) {
-            LOG_I_STREAM << rssManager.printItem (randomItem) << std::endl;
-            // Remaining items in the feed
             int remainingItems = rssManager.getFeedQueueSize ();
             LOG_I_STREAM << "Remaining items in the feed queue: " << remainingItems << std::endl;
+            LOG_I_STREAM << rssManager.printItem (randomItem) << std::endl;
+            // Discord Channel Output
+            printStringToChannel (rssManager.printItemShort (randomItem), channelRss, {}, noEmbedded);
           } else {
+            printStringToChannel ("No items found in the feed queue.", channelRss, {}, noEmbedded);
             LOG_W_STREAM << "No items found in the feed queue." << std::endl;
           }
+
           isPollingPrintFeedRunning.store (true);
         } catch (const std::runtime_error& e) {
           LOG_E_STREAM << "Error: " << e.what () << std::endl;
@@ -351,6 +354,47 @@ std::string DiscordBot::getLinuxFastfetchCpp () {
   }
 
   return result.str ();
+}
+
+/// @brief  Print a string message to a specified Discord channel.
+/// This function sends a message to a Discord channel, either as a reply to a slash command or as a
+/// direct message. It checks the message length and channel ID before sending.
+/// @param message 
+/// @param channelId 
+/// @param event 
+/// @param allowEmbedded 
+/// @return Returns 0 on success, -1 if the message is empty, -2 if the message exceeds the maximum length,
+///         -3 if the channel ID is 0.
+int DiscordBot::printStringToChannel (const std::string& message, dpp::snowflake channelId,
+                                      const dpp::slashcommand_t& event, bool allowEmbedded) {
+  if (message.empty ()) {
+    LOG_W_STREAM << "Message is empty, nothing to send." << std::endl;
+    return -1;
+  }
+
+  if (message.size () > DISCORD_MAX_MSG_LEN) {
+    LOG_E_STREAM << "Message exceeds maximum length of " << DISCORD_MAX_MSG_LEN
+                 << " characters. Message will not be sent." << std::endl;
+    return -2;
+  }
+
+  if (channelId == 0) {
+    LOG_W_STREAM << "Channel ID is 0, message will not be sent." << std::endl;
+    return -3;
+  }
+
+  dpp::message msg (channelId, message);
+  if (!allowEmbedded) {
+    msg.set_flags (dpp::m_suppress_embeds); // Suppress embeds if allowEmbedded is false
+  }
+  if (event.command.id != 0) {
+    event.reply (msg);
+  } else {
+    bot_->message_create (msg);
+  }
+  LOG_I_STREAM << "Message sent to channel " << channelId << ": " << message << std::endl;
+
+  return 0;
 }
 
 /// @brief Send RSS feed via slash command reply
