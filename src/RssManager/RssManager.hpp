@@ -4,20 +4,33 @@
 #include <tinyxml2.h>
 #include <string>
 #include <vector>
+#include <algorithm>
 
-const int MAX_CHARS_PER_MSG = 2000; // Max characters per message
+const int DISCORD_MAX_MSG_LEN = 2000; // Discord max characters per message
 
 struct RSSItem {
-  std::string title;
-  std::string link;
-  std::string description;
-  std::string pubDate;
-  std::string guid;
+  std::string title_;
+  std::string link_;
+  std::string description_;
+  std::string pubDate_;
+  std::string language_;
+  std::string hash_;
 
   RSSItem () = default;
   RSSItem (const std::string& t, const std::string& l, const std::string& d,
-           const std::string& date = "", const std::string& id = "")
-      : title (t), link (l), description (d), pubDate (date), guid (id) {
+           const std::string& date = "", const std::string& lang="" , const std::string& hash="")
+      : title_ (t), link_ (l), description_ (d), pubDate_ (date), language_ (lang), hash_ (hash) {
+  }
+};
+
+// todo use external storage for seen hashes
+struct SeenHashes {
+  std::vector<std::string> hashes; // Store unique hashes of seen items
+  void addHash (const std::string& hash) {
+    hashes.push_back (hash);
+  }
+  bool contains (const std::string& hash) const {
+    return std::find (hashes.begin (), hashes.end (), hash) != hashes.end ();
   }
 };
 
@@ -26,6 +39,10 @@ struct RSSFeed {
   std::string title;
   std::string description;
   std::string link;
+  std::string pubDate;
+  std::string language;
+  std::string hash; // Unique hash for the feed
+
   std::vector<RSSItem> items;
 
   void addItem (const RSSItem& item) {
@@ -54,14 +71,15 @@ class FeedParser {
 public:
   FeedParser () = default;
   ~FeedParser () = default;
-  RSSFeed parseRSSToStruct (const std::string& xmlData);
+  RSSFeed parseRSSToDataStructure (const std::string& xmlData);
+
+private:
 };
 
 class FeedFetcher {
 public:
   FeedFetcher () = default;
   ~FeedFetcher () = default;
-
   std::string feedFromUrl (std::string url, int rssType = 2);
   std::string feedRandomFromUrl (std::string url, int rssType = 2);
 

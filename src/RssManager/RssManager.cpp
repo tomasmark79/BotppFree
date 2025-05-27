@@ -4,13 +4,15 @@
 #include <random>
 #include <curl/curl.h>
 
+SeenHashes seenHashes; // Global instance to track seen hashes
+
 size_t WriteCallback (void* contents, size_t size, size_t nmemb, void* userp) {
   ((std::string*)userp)->append ((char*)contents, size * nmemb);
   return size * nmemb;
 }
 
-RSSFeed FeedParser::parseRSSToStruct (const std::string& xmlData) {
-  LOG_D_STREAM << "Parsing RSS feed to structure..." << std::endl;
+RSSFeed FeedParser::parseRSSToDataStructure (const std::string& xmlData) {
+  LOG_D_STREAM << "called: parseRSSToDataStructure" << std::endl;
 
   RSSFeed localFeed;
   tinyxml2::XMLDocument doc;
@@ -54,33 +56,51 @@ RSSFeed FeedParser::parseRSSToStruct (const std::string& xmlData) {
   if (auto linkElement = channel->FirstChildElement ("link")) {
     localFeed.link = linkElement->GetText () ? linkElement->GetText () : "";
   }
+  if (auto languageElement = channel->FirstChildElement ("language")) {
+    localFeed.language = languageElement->GetText () ? languageElement->GetText () : "";
+  }
+  if (auto pubDateElement = channel->FirstChildElement ("pubDate")) {
+    localFeed.pubDate = pubDateElement->GetText () ? pubDateElement->GetText () : "";
+  }
 
   // Parse items
   tinyxml2::XMLElement* item = firstItem;
+
   while (item) {
     RSSItem rssItem;
 
     if (auto titleElement = item->FirstChildElement ("title")) {
-      rssItem.title = titleElement->GetText () ? titleElement->GetText () : "";
+      rssItem.title_ = titleElement->GetText () ? titleElement->GetText () : "";
     }
     if (auto linkElement = item->FirstChildElement ("link")) {
-      rssItem.link = linkElement->GetText () ? linkElement->GetText () : "";
+      rssItem.link_ = linkElement->GetText () ? linkElement->GetText () : "";
     }
     if (auto descElement = item->FirstChildElement ("description")) {
-      rssItem.description = descElement->GetText () ? descElement->GetText () : "";
+      rssItem.description_ = descElement->GetText () ? descElement->GetText () : "";
     }
     if (auto pubDateElement = item->FirstChildElement ("pubDate")) {
-      rssItem.pubDate = pubDateElement->GetText () ? pubDateElement->GetText () : "";
+      rssItem.pubDate_ = pubDateElement->GetText () ? pubDateElement->GetText () : "";
     }
-    if (auto guidElement = item->FirstChildElement ("guid")) {
-      rssItem.guid = guidElement->GetText () ? guidElement->GetText () : "";
-    }
-
-    if (!rssItem.title.empty () && !rssItem.link.empty ()) {
-      localFeed.addItem (rssItem);
-      LOG_I_STREAM << "Added item: " << rssItem.title << std::endl;
+    if (auto languageElement = item->FirstChildElement ("language")) {
+      rssItem.language_ = languageElement->GetText () ? languageElement->GetText () : "";
     }
 
+    // hash generation
+    std::hash<std::string> hasher;
+    rssItem.hash_ = std::to_string (hasher (rssItem.title_ + rssItem.link_ + rssItem.description_));
+
+    // avoid adding duplicate items
+    if (seenHashes.contains (rssItem.hash_)) {
+      LOG_W_STREAM << "Skipping duplicate item with hash: " << rssItem.hash_ << std::endl;
+    } else {
+      // Add item to feed if it has a title and link
+      if (!rssItem.title_.empty () && !rssItem.link_.empty ()) {
+        localFeed.addItem (rssItem);
+        seenHashes.addHash (rssItem.hash_); // Add hash to seen hashes
+      } else {
+        LOG_W_STREAM << "Skipping item with missing title or link." << std::endl;
+      }
+    }
     item = item->NextSiblingElement ("item");
   }
 
@@ -96,11 +116,17 @@ std::string RSSFeed::toString () const {
   result += "Link: " + link + "\n\n";
 
   for (const auto& item : items) {
-    result += "Title: " + item.title + "\n";
-    result += "Link: " + item.link + "\n";
-    result += "Description: " + item.description + "\n";
-    if (!item.pubDate.empty ()) {
-      result += "Published: " + item.pubDate + "\n";
+    result += "Title: " + item.title_ + "\n";
+    result += "Link: " + item.link_ + "\n";
+    result += "Description: " + item.description_ + "\n";
+    if (!item.pubDate_.empty ()) {
+      result += "Published: " + item.pubDate_ + "\n";
+    }
+    if (!item.language_.empty ()) {
+      result += "Language: " + item.language_ + "\n";
+    }
+    if (!item.hash_.empty ()) {
+      result += "Hash: " + item.hash_ + "\n";
     }
     result += "------------------------\n";
   }
@@ -126,13 +152,21 @@ std::string FeedFetcher::feedFromUrl (std::string url, int rssType) {
     if (res != CURLE_OK) {
       LOG_E_STREAM << "curl_easy_perform() failed: " << curl_easy_strerror (res) << std::endl;
     } else {
-      LOG_D_STREAM << "Downloaded content:\n" << rawRssBuffer << std::endl;
-      RSSFeed localFeed = feedParser.parseRSSToStruct (rawRssBuffer);
+      // LOG_D_STREAM << "Downloaded content:\n" << rawRssBuffer << std::endl;
+
+      // Parse the RSS feed
+      RSSFeed localFeed = feedParser.parseRSSToDataStructure (rawRssBuffer);
+
       for (const auto& item : localFeed.getItems ()) {
-        LOG_I_STREAM << "Title: " << item.title << std::endl;
-        LOG_I_STREAM << "Link: " << item.link << std::endl;
-        msg = "[" + item.title + "](" + item.link + ")\n";
-        if (msg.size () + limitedMsg.size () < MAX_CHARS_PER_MSG) {
+        LOG_I_STREAM << "Title: " << item.title_ << std::endl;
+        LOG_I_STREAM << "Link: " << item.link_ << std::endl;
+        LOG_I_STREAM << "Description: " << item.description_ << std::endl;
+        LOG_I_STREAM << "Published: " << item.pubDate_ << std::endl;
+        LOG_I_STREAM << "Language: " << item.language_ << std::endl;
+        LOG_I_STREAM << "Hash: " << item.hash_ << std::endl;
+
+        msg = "[" + item.title_ + "](" + item.link_ + ")\n";
+        if (msg.size () + limitedMsg.size () < DISCORD_MAX_MSG_LEN) {
           limitedMsg += msg;
         }
       }
@@ -163,7 +197,7 @@ std::string FeedFetcher::feedRandomFromUrl (std::string url, int rssType) {
       LOG_E_STREAM << "curl_easy_perform() failed: " << curl_easy_strerror (res) << std::endl;
     } else {
       LOG_D_STREAM << "Downloaded content:\n" << rawRssBuffer << std::endl;
-      RSSFeed localFeed = feedParser.parseRSSToStruct (rawRssBuffer);
+      RSSFeed localFeed = feedParser.parseRSSToDataStructure (rawRssBuffer);
 
       // get one random item from feed
       if (localFeed.getItemCount () > 0) {
@@ -175,9 +209,9 @@ std::string FeedFetcher::feedRandomFromUrl (std::string url, int rssType) {
 
         const RSSItem& item = localFeed.getItems ()[randomIndex];
 
-        LOG_I_STREAM << "Random item: " << item.title << std::endl;
-        LOG_I_STREAM << "Link: " << item.link << std::endl;
-        msg = "[" + item.title + "](" + item.link + ")\n";
+        LOG_I_STREAM << "Random item: " << item.title_ << std::endl;
+        LOG_I_STREAM << "Link: " << item.link_ << std::endl;
+        msg = "[" + item.title_ + "](" + item.link_ + ")\n";
       } else {
         LOG_E_STREAM << "No items found in the RSS feed." << std::endl;
       }
