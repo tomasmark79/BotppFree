@@ -36,19 +36,27 @@ namespace dotname {
 
       // testy
       FeedFetcher feedFetcher;
-      std::string rssFeed1 = feedFetcher.feedRandomFromUrl ("www.abclinuxu.cz/auto/abc.rss", 1);
+      std::string rssFeed1 = feedFetcher.feedFromUrl ("www.abclinuxu.cz/auto/abc.rss", 1);
       if (rssFeed1.empty ()) {
         LOG_E_STREAM << "Failed to fetch RSS feed." << std::endl;
       } else {
         LOG_I_STREAM << "Fetched RSS feed successfully:\n" << rssFeed1 << std::endl;
       }
 
-      std::string rssFeed2 = feedFetcher.feedRandomFromUrl ("https://www.root.cz/rss/clanky/");
+      std::string rssFeed2 = feedFetcher.feedFromUrl ("www.abclinuxu.cz/auto/abc.rss", 1);
       if (rssFeed2.empty ()) {
         LOG_E_STREAM << "Failed to fetch RSS feed." << std::endl;
       } else {
         LOG_I_STREAM << "Fetched RSS feed successfully:\n" << rssFeed2 << std::endl;
       }
+
+
+      // std::string rssFeed2 = feedFetcher.feedRandomFromUrl ("https://www.root.cz/rss/clanky/");
+      // if (rssFeed2.empty ()) {
+      //   LOG_E_STREAM << "Failed to fetch RSS feed." << std::endl;
+      // } else {
+      //   LOG_I_STREAM << "Fetched RSS feed successfully:\n" << rssFeed2 << std::endl;
+      // }
     }
   }
 
