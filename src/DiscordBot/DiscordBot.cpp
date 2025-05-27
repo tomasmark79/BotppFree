@@ -343,17 +343,17 @@ std::string DiscordBot::getLinuxFastfetchCpp () {
 void DiscordBot::sendRssFeedViaReply (const std::string& url, const dpp::slashcommand_t& event,
                                       bool allowEmbedded, bool fullFeed) {
   FeedFetcher feedFetcher;
-  std::string rssFeed = fullFeed ? feedFetcher.feedFromUrl (url) : feedFetcher.feedRandomFromUrl (url);
+  // std::string rssFeed = fullFeed ? feedFetcher.feedFromUrl (url) : feedFetcher.feedRandomFromUrl (url);
 
-  if (rssFeed.empty ()) {
-    event.reply ("Failed to fetch RSS feed. Please try again later.");
-  } else {
-    dpp::message msg (event.command.channel_id, rssFeed);
-    if (!allowEmbedded) {
-      msg.set_flags (dpp::m_suppress_embeds);
-    }
-    event.reply (msg);
-  }
+  // if (rssFeed.empty ()) {
+  //   event.reply ("Failed to fetch RSS feed. Please try again later.");
+  // } else {
+  //   dpp::message msg (event.command.channel_id, rssFeed);
+  //   if (!allowEmbedded) {
+  //     msg.set_flags (dpp::m_suppress_embeds);
+  //   }
+  //   event.reply (msg);
+  // }
 }
 
 /// @brief Send RSS feed via direct message to channel
@@ -363,19 +363,19 @@ void DiscordBot::sendRssFeedViaReply (const std::string& url, const dpp::slashco
 /// @param fullFeed If true, sends full feed; if false, sends random item
 void DiscordBot::sendRssFeedToChannel (const std::string& url, dpp::snowflake channelId,
                                        bool allowEmbedded, bool fullFeed) {
-  FeedFetcher feedFetcher;
-  std::string rssFeed = fullFeed ? feedFetcher.feedFromUrl (url) : feedFetcher.feedRandomFromUrl (url);
+  // FeedFetcher feedFetcher;
+  // std::string rssFeed = fullFeed ? feedFetcher.feedFromUrl (url) : feedFetcher.feedRandomFromUrl (url);
 
-  if (rssFeed.empty ()) {
-    bot_->message_create (
-        dpp::message (channelId, "Failed to fetch RSS feed. Please try again later."));
-  } else {
-    dpp::message msg (channelId, rssFeed);
-    if (!allowEmbedded) {
-      msg.set_flags (dpp::m_suppress_embeds);
-    }
-    bot_->message_create (msg);
-  }
+  // if (rssFeed.empty ()) {
+  //   bot_->message_create (
+  //       dpp::message (channelId, "Failed to fetch RSS feed. Please try again later."));
+  // } else {
+  //   dpp::message msg (channelId, rssFeed);
+  //   if (!allowEmbedded) {
+  //     msg.set_flags (dpp::m_suppress_embeds);
+  //   }
+  //   bot_->message_create (msg);
+  // }
 }
 
 /// @brief Print the full RSS feed to a specified Discord channel.

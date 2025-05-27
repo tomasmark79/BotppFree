@@ -5,8 +5,16 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <random>
 
 const int DISCORD_MAX_MSG_LEN = 2000; // Discord max characters per message
+
+inline int getModernRandomNumber (int min, int max) {
+  static std::random_device rd;                     // Obtain a random number from hardware
+  static std::mt19937 eng (rd ());                  // Seed the generator
+  std::uniform_int_distribution<> distr (min, max); // Define the range
+  return distr (eng);                               // Generate the random number
+}
 
 struct RSSItem {
   std::string title_;
@@ -18,7 +26,7 @@ struct RSSItem {
 
   RSSItem () = default;
   RSSItem (const std::string& t, const std::string& l, const std::string& d,
-           const std::string& date = "", const std::string& lang="" , const std::string& hash="")
+           const std::string& date = "", const std::string& lang = "", const std::string& hash = "")
       : title_ (t), link_ (l), description_ (d), pubDate_ (date), language_ (lang), hash_ (hash) {
   }
 };
@@ -35,7 +43,7 @@ struct SeenHashes {
 };
 
 struct RSSFeed {
-  std::string toString () const;
+  //std::string toString () const;
   std::string title;
   std::string description;
   std::string link;
@@ -65,13 +73,77 @@ struct RSSFeed {
   const std::vector<RSSItem>& getItems () const {
     return items;
   }
+  std::vector<RSSItem>& getItems () {
+    return items;
+  }
+};
+
+inline SeenHashes seenHashes; // Global instance to track seen hashes (future in external storage)
+inline RSSFeed rssFeeds;      // Global instance to store RSS feeds
+
+class FeedPrinter {
+public:
+  FeedPrinter () = default;
+  ~FeedPrinter () = default;
+
+  std::string printItem (const RSSItem& item) {
+    std::string result = "Title: " + item.title_ + "\n";
+    result += "Link: " + item.link_ + "\n";
+    result += "Description: " + item.description_ + "\n";
+    if (!item.pubDate_.empty ()) {
+      result += "Published: " + item.pubDate_ + "\n";
+    }
+    if (!item.language_.empty ()) {
+      result += "Language: " + item.language_ + "\n";
+    }
+    if (!item.hash_.empty ()) {
+      result += "Hash: " + item.hash_ + "\n";
+    }
+    return result;
+  }
+};
+
+class FeedPicker {
+public:
+  FeedPicker () = default;
+  ~FeedPicker () = default;
+
+  RSSItem pickRandomItem (const RSSFeed& feed) {
+    if (feed.getItemCount () == 0) {
+      return RSSItem (); // Return empty item if no items are available
+    }
+    size_t randomIndex = rand () % feed.getItemCount ();
+    return feed.getItems ()[randomIndex];
+  }
+
+  RSSItem pickUpRandomItem () {
+    if (rssFeeds.getItems ().empty ()) {
+      return RSSItem (); // Return empty item if no items are available
+    }
+
+    // Ensure randomIndex_ is within the bounds of the items vector
+    if (randomIndex_ >= rssFeeds.getItemCount ()) {
+      randomIndex_ = 0; // Reset to 0 if out of bounds
+    }
+
+    randomIndex_ = getModernRandomNumber (0, rssFeeds.getItemCount () - 1);
+    RSSItem randomItem = rssFeeds.getItems ()[randomIndex_];
+
+    // Remove the item from the feed
+    rssFeeds.getItems ().erase (rssFeeds.getItems ().begin () + randomIndex_);
+
+    return randomItem; // Return the picked item
+  }
+
+private:
+  size_t randomIndex_ = 0;
 };
 
 class FeedParser {
 public:
   FeedParser () = default;
   ~FeedParser () = default;
-  RSSFeed parseRSSToDataStructure (const std::string& xmlData);
+  RSSFeed& parseRSSToDataStructure (const std::string& xmlData);
 
 private:
 };
@@ -80,8 +152,10 @@ class FeedFetcher {
 public:
   FeedFetcher () = default;
   ~FeedFetcher () = default;
-  std::string feedFromUrl (std::string url, int rssType = 2);
-  std::string feedRandomFromUrl (std::string url, int rssType = 2);
+  int fetchFeed (std::string url);
+
+  // std::string feedFromUrl (std::string url, int rssType = 2);
+  // std::string feedRandomFromUrl (std::string url, int rssType = 2);
 
 private:
   FeedParser feedParser;
