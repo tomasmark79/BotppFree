@@ -1,7 +1,7 @@
 #include "DiscordBot.hpp"
 #include <Logger/Logger.hpp>
 #include <IBot/version.h>
-#include <RssReader/RssReader.hpp>
+#include <RssManager/RssManager.hpp>
 
 #include <thread>
 #include <atomic>
@@ -342,8 +342,8 @@ std::string DiscordBot::getLinuxFastfetchCpp () {
 /// @param fullFeed If true, sends full feed; if false, sends random item
 void DiscordBot::sendRssFeedViaReply (const std::string& url, const dpp::slashcommand_t& event,
                                       bool allowEmbedded, bool fullFeed) {
-  RssReader rssReader;
-  std::string rssFeed = fullFeed ? rssReader.feedFromUrl (url) : rssReader.feedRandomFromUrl (url);
+  FeedFetcher feedFetcher;
+  std::string rssFeed = fullFeed ? feedFetcher.feedFromUrl (url) : feedFetcher.feedRandomFromUrl (url);
 
   if (rssFeed.empty ()) {
     event.reply ("Failed to fetch RSS feed. Please try again later.");
@@ -363,8 +363,8 @@ void DiscordBot::sendRssFeedViaReply (const std::string& url, const dpp::slashco
 /// @param fullFeed If true, sends full feed; if false, sends random item
 void DiscordBot::sendRssFeedToChannel (const std::string& url, dpp::snowflake channelId,
                                        bool allowEmbedded, bool fullFeed) {
-  RssReader rssReader;
-  std::string rssFeed = fullFeed ? rssReader.feedFromUrl (url) : rssReader.feedRandomFromUrl (url);
+  FeedFetcher feedFetcher;
+  std::string rssFeed = fullFeed ? feedFetcher.feedFromUrl (url) : feedFetcher.feedRandomFromUrl (url);
 
   if (rssFeed.empty ()) {
     bot_->message_create (

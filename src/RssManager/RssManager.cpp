@@ -1,5 +1,6 @@
-#include "RssReader.hpp"
+#include "RssManager.hpp"
 #include <Logger/Logger.hpp>
+#include <BufferQueue/BufferQueue.hpp>
 #include <random>
 #include <curl/curl.h>
 
@@ -8,7 +9,7 @@ size_t WriteCallback (void* contents, size_t size, size_t nmemb, void* userp) {
   return size * nmemb;
 }
 
-RssReader::RSSFeed RssReader::parseRSSToStruct (const std::string& xmlData) {
+RSSFeed FeedParser::parseRSSToStruct (const std::string& xmlData) {
   LOG_D_STREAM << "Parsing RSS feed to structure..." << std::endl;
 
   RSSFeed localFeed;
@@ -89,7 +90,7 @@ RssReader::RSSFeed RssReader::parseRSSToStruct (const std::string& xmlData) {
 }
 
 // Helper method to convert RSSFeed back to string if needed
-std::string RssReader::RSSFeed::toString () const {
+std::string RSSFeed::toString () const {
   std::string result = "RSS Feed: " + title + "\n";
   result += "Description: " + description + "\n";
   result += "Link: " + link + "\n\n";
@@ -106,7 +107,7 @@ std::string RssReader::RSSFeed::toString () const {
   return result;
 }
 
-std::string RssReader::feedFromUrl (std::string url, int rssType) {
+std::string FeedFetcher::feedFromUrl (std::string url, int rssType) {
   std::string msg = "";
   std::string limitedMsg = "";
   CURL* curl;
@@ -126,7 +127,7 @@ std::string RssReader::feedFromUrl (std::string url, int rssType) {
       LOG_E_STREAM << "curl_easy_perform() failed: " << curl_easy_strerror (res) << std::endl;
     } else {
       LOG_D_STREAM << "Downloaded content:\n" << rawRssBuffer << std::endl;
-      RSSFeed localFeed = parseRSSToStruct (rawRssBuffer);
+      RSSFeed localFeed = feedParser.parseRSSToStruct (rawRssBuffer);
       for (const auto& item : localFeed.getItems ()) {
         LOG_I_STREAM << "Title: " << item.title << std::endl;
         LOG_I_STREAM << "Link: " << item.link << std::endl;
@@ -143,7 +144,7 @@ std::string RssReader::feedFromUrl (std::string url, int rssType) {
   return "Error: Could not get the RSS feed!";
 }
 
-std::string RssReader::feedRandomFromUrl (std::string url, int rssType) {
+std::string FeedFetcher::feedRandomFromUrl (std::string url, int rssType) {
   std::string msg = "";
   CURL* curl;
   CURLcode res;
@@ -162,7 +163,7 @@ std::string RssReader::feedRandomFromUrl (std::string url, int rssType) {
       LOG_E_STREAM << "curl_easy_perform() failed: " << curl_easy_strerror (res) << std::endl;
     } else {
       LOG_D_STREAM << "Downloaded content:\n" << rawRssBuffer << std::endl;
-      RSSFeed localFeed = parseRSSToStruct (rawRssBuffer);
+      RSSFeed localFeed = feedParser.parseRSSToStruct (rawRssBuffer);
 
       // get one random item from feed
       if (localFeed.getItemCount () > 0) {
