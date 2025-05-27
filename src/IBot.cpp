@@ -34,39 +34,18 @@ namespace dotname {
       //   LOG_E_STREAM << "Failed to initialize Discord bot." << std::endl;
       // }
 
-      FeedFetcher feedFetcher;
-      FeedPicker feedPicker;
-      FeedPrinter feedPrinter;
-
       while (1) {
-        // rssFeed = feedFetcher.feedFromUrl ("www.abclinuxu.cz/auto/abc.rss", 1);
-        int result = feedFetcher.fetchFeed ("https://www.abclinuxu.cz/auto/abc.rss");
-
-        // Pick a random item from the feed
-        RSSItem randomItem = feedPicker.pickUpRandomItem ();
-
-        // Check if the item is valid
-        if (randomItem.title_.empty ()) {
-          LOG_E_STREAM << "No more items available in the feed queue." << std::endl;
-          std::this_thread::sleep_for (std::chrono::seconds (5));
-          continue; // Skip to the next iteration if no items are available
+        RssManager rssManager;
+        // fetch in interval
+        int itemCount = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/abc.rss");
+        if (itemCount > 0) {
+          RSSItem randomItem = rssManager.getRandomItem ();
+          if (!randomItem.title_.empty ()) {
+            LOG_I_STREAM << rssManager.printItem (randomItem) << std::endl;
+          }
         }
-
-        // Print item
-        LOG_I_STREAM << "Random item from feed:\n"
-                     << feedPrinter.printItem (randomItem) << std::endl;
-
-
-        // Simulate a delay for testing purposes
         std::this_thread::sleep_for (std::chrono::seconds (2));
       }
-
-      // std::string rssFeed2 = feedFetcher.feedRandomFromUrl ("https://www.root.cz/rss/clanky/");
-      // if (rssFeed2.empty ()) {
-      //   LOG_E_STREAM << "Failed to fetch RSS feed." << std::endl;
-      // } else {
-      //   LOG_I_STREAM << "Fetched RSS feed successfully:\n" << rssFeed2 << std::endl;
-      // }
     }
   }
 

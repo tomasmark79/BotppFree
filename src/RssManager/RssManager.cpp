@@ -171,7 +171,7 @@ int FeedFetcher::fetchFeed (std::string url) {
       // LOG_D_STREAM << "Downloaded content:\n" << rawRssBuffer << std::endl;
       rssFeeds = feedParser.parseRSSToDataStructure (rawRssBuffer);
       if (rssFeeds.getItemCount () > 0) {
-        LOG_I_STREAM << "Fetched " << rssFeeds.getItemCount () << " items from the feed."
+        LOG_D_STREAM << "Fetched " << rssFeeds.getItemCount () << " items from the feed."
                      << std::endl;
       } else {
         LOG_E_STREAM << "No items found in the RSS feed." << std::endl;

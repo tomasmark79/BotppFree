@@ -161,4 +161,28 @@ private:
   FeedParser feedParser;
 };
 
+class RssManager {
+public:
+  RssManager () = default;
+  ~RssManager () = default;
+
+  // Fetch RSS feed from URL
+  int fetchFeed (const std::string& url) {
+    FeedFetcher fetcher;
+    return fetcher.fetchFeed (url);
+  }
+
+  // Get a random item from the fetched feed
+  RSSItem getRandomItem () {
+    FeedPicker picker;
+    return picker.pickUpRandomItem ();
+  }
+
+  // Print the item details
+  std::string printItem (const RSSItem& item) {
+    FeedPrinter printer;
+    return printer.printItem (item);
+  }
+};
+
 #endif // __RSSMANAGER_H__
