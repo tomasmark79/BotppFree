@@ -180,6 +180,11 @@ public:
     FeedPrinter printer;
     return printer.printItem (item);
   }
+
+  // Get the size of the feed queue
+  size_t getFeedQueueSize () const {
+    return rssFeeds.getItemCount ();
+  }
 };
 
 #endif // __RSSMANAGER_H__

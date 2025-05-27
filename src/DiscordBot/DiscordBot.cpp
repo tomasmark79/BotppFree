@@ -10,40 +10,78 @@
 const dpp::snowflake channelRss = 1375852042790244352;
 const bool noEmbedded = false;
 
-std::atomic<bool> isRootOnTheLine (false);
-std::atomic<bool> isPollingRunning (false);
-std::atomic<bool> stopPolling (false);
-int pollingIntervalInSec = 60 * 60; // Default polling interval set to 45 minutes
-// int pollingIntervalInSec = 10;
+// Polling print feed every 47 minutes
+std::atomic<bool> isPollingPrintFeedRunning (false);
+std::atomic<bool> stopPollingPrintFeed (false);
+//int pollingPrintFeedIntervalInSec = 60 * 47;
 
-/// @brief Thread function to start polling for RSS feeds.
-/// This function runs in a separate thread and continuously fetches RSS feeds at specified intervals.
-/// It checks the stopPolling atomic variable to determine when to stop polling.
-/// If an error occurs during polling, it logs the error and sets isPollingRunning to false.
-/// @return Returns true if polling started successfully, false otherwise.
-bool DiscordBot::startPolling () {
+int pollingPrintFeedIntervalInSec = 2; // test purpose
+
+bool DiscordBot::startPollingPrintFeed () {
   {
-    std::thread pollingThread ([&] () -> void {
-      while (!stopPolling.load ()) {
+    std::thread pollingThreadPrintFeed ([&] () -> void {
+      while (!stopPollingPrintFeed.load ()) {
         try {
-          if (isRootOnTheLine.load ()) {
-            sendRssFeedToChannel ("https://www.root.cz/rss/clanky/", channelRss, !noEmbedded,
-                                  false);
-            isRootOnTheLine.store (false);
+          RssManager rssManager;
+          RSSItem randomItem = rssManager.getRandomItem ();
+          if (!randomItem.title_.empty ()) {
+            LOG_I_STREAM << rssManager.printItem (randomItem) << std::endl;
+            // Remaining items in the feed
+            int remainingItems = rssManager.getFeedQueueSize ();
+            LOG_I_STREAM << "Remaining items in the feed queue: " << remainingItems << std::endl;
           } else {
-            sendRssFeedToChannel ("https://www.abclinuxu.cz/auto/abc.rss", channelRss, noEmbedded,
-                                  false);
-            isRootOnTheLine.store (true);
+            LOG_W_STREAM << "No items found in the feed queue." << std::endl;
           }
-          isPollingRunning.store (true);
+          isPollingPrintFeedRunning.store (true);
         } catch (const std::runtime_error& e) {
           LOG_E_STREAM << "Error: " << e.what () << std::endl;
-          isPollingRunning.store (false);
+          isPollingPrintFeedRunning.store (false);
         }
-        std::this_thread::sleep_for (std::chrono::seconds (pollingIntervalInSec));
+        std::this_thread::sleep_for (std::chrono::seconds (pollingPrintFeedIntervalInSec));
       }
     });
-    pollingThread.detach ();
+    pollingThreadPrintFeed.detach ();
+  }
+  return true;
+}
+
+// Polling fetch feed 12 hours
+std::atomic<bool> isPollingFetchFeedRunning (false);
+std::atomic<bool> stopPollingFetchFeed (false);
+// int pollingFetchFeedIntervalInSec = 60 * 60 * 12;
+int pollingFetchFeedIntervalInSec = 20; // test purpose
+bool DiscordBot::startPollingFetchFeed () {
+  {
+    std::thread pollingThreadFetchFeed ([&] () -> void {
+      while (!stopPollingFetchFeed.load ()) {
+        try {
+          // Regularly fetch
+          RssManager rssManager;
+          // Fetch the RSS feed and print the items
+          int itemCount;
+          itemCount = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/abc.rss")
+                      + rssManager.fetchFeed ("https://www.root.cz/rss/clanky/");
+          LOG_I_STREAM << "Thread pollingThreadFetchFeed: Fetched " << itemCount
+                       << " items from the feeds." << std::endl;
+
+          // if (isRootOnTheLine.load ()) {
+          //   sendRssFeedToChannel ("https://www.root.cz/rss/clanky/", channelRss, !noEmbedded,
+          //                         false);
+          //   isRootOnTheLine.store (false);
+          // } else {
+          //   sendRssFeedToChannel ("https://www.abclinuxu.cz/auto/abc.rss", channelRss, noEmbedded,
+          //                         false);
+          //   isRootOnTheLine.store (true);
+          // }
+          isPollingPrintFeedRunning.store (true);
+        } catch (const std::runtime_error& e) {
+          LOG_E_STREAM << "Error: " << e.what () << std::endl;
+          isPollingPrintFeedRunning.store (false);
+        }
+        std::this_thread::sleep_for (std::chrono::seconds (pollingFetchFeedIntervalInSec));
+      }
+    });
+    pollingThreadFetchFeed.detach ();
   }
   return true;
 }
@@ -168,18 +206,6 @@ void DiscordBot::loadOnSlashCommands () {
                               noEmbedded);
     }
 
-    // set-pollinginterval
-    if (event.command.get_command_name () == "set-pollinginterval") {
-      if (std::holds_alternative<int64_t> (event.get_parameter ("interval"))) {
-        pollingIntervalInSec
-            = static_cast<int> (std::get<int64_t> (event.get_parameter ("interval")));
-        event.reply ("Polling interval set to " + std::to_string (pollingIntervalInSec)
-                     + " seconds.");
-      } else {
-        event.reply ("Invalid interval parameter. Please provide an integer value.");
-      }
-    }
-
     // rss
     if (event.command.get_command_name () == "rss") {
       event.reply ("Bot++ podporuje RSS 1.0 (RDF) format a RSS 2.0 format.\n"
@@ -272,15 +298,6 @@ void DiscordBot::loadOnReadyCommands () {
     bot_->global_command_create (dpp::slashcommand ("abcfaq", "Často kladené dotazy!", bot_->me.id));
     bot_->global_command_create (dpp::slashcommand ("abcovladace", "Ovladače!", bot_->me.id));
 
-    // set-pollinginterval
-    bot_->global_command_create (
-        dpp::slashcommand ("set-pollinginterval",
-                           "Set the polling interval for RSS feeds in seconds (default: 1800 seconds).",
-                           bot_->me.id)
-            .add_option (
-                dpp::command_option (dpp::co_integer, "seconds", "Polling interval in seconds", true)
-            )
-    );
 
     // get-pollinginterval
     bot_->global_command_create (
@@ -306,7 +323,8 @@ void DiscordBot::loadOnReadyCommands () {
 
     // clang-format on
 
-    startPolling ();
+    startPollingFetchFeed ();
+    startPollingPrintFeed ();
   });
 }
 

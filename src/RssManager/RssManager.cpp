@@ -13,8 +13,6 @@ size_t WriteCallback (void* contents, size_t size, size_t nmemb, void* userp) {
 /// @param xmlData The XML data of the RSS feed as a string.
 /// @return A reference to the populated RSSFeed data structure.
 RSSFeed& FeedParser::parseRSSToDataStructure (const std::string& xmlData) {
-  LOG_D_STREAM << "called: parseRSSToDataStructure" << std::endl;
-
   std::vector<std::string> skippedItems;
 
   tinyxml2::XMLDocument doc;
@@ -109,15 +107,8 @@ RSSFeed& FeedParser::parseRSSToDataStructure (const std::string& xmlData) {
   }
 
   LOG_I_STREAM << "Parsed " << rssFeeds.getItemCount () << " " << (isRSS2 ? "RSS2" : "RDF RSS")
-               << " items" << std::endl;
-
-  if (!skippedItems.empty ()) {
-    LOG_W_STREAM << "Skipped " << skippedItems.size () << " duplicate items: ";
-    for (const auto& hash : skippedItems) {
-      LOG_W_STREAM << hash << " ";
-    }
-    LOG_W_STREAM << std::endl;
-  }
+               << " items - " << "Skipped " << skippedItems.size () << " duplicate items."
+               << std::endl;
 
   return rssFeeds;
 }
@@ -159,4 +150,3 @@ int FeedFetcher::fetchFeed (std::string url) {
   curl_easy_cleanup (curl);
   return -1;
 }
-
