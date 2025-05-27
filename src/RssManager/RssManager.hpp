@@ -154,9 +154,6 @@ public:
   ~FeedFetcher () = default;
   int fetchFeed (std::string url);
 
-  // std::string feedFromUrl (std::string url, int rssType = 2);
-  // std::string feedRandomFromUrl (std::string url, int rssType = 2);
-
 private:
   FeedParser feedParser;
 };
