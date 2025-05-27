@@ -4,7 +4,14 @@
 
 # BotppFree
 
-Discord bot pro český Discord Server Linux CZ/SK - [Pozvánka](https://discord.gg/MBuvrRWQR6)
+Univerzální Discord bot.
+ 
+ > Cílem bota je v tuto dobu především servírování novinek z definovaných zdrojů RSS do specifického kanálu
+
+Bot v tuto dobu běží v testovacím módu na největším Discord Serveru Linux CZ/SK - [Pozvánka](https://discord.gg/MBuvrRWQR6)
+
+ - Project je open source, a je možné jej použít kýmkoli a kdekoli
+ - stav projektu je nyní ve velmi ranné fázi testování
 
 ### Některé vlastnosti
 
@@ -23,3 +30,12 @@ Discord bot pro český Discord Server Linux CZ/SK - [Pozvánka](https://discord
  ---
 
 BotppFree is proudly built with **[D🌀tName C++ Template](https://github.com/tomasmark79/DotNameCppFree)**.
+
+## License
+
+MIT License  
+Copyright (c) 2024-2025 Tomáš Mark
+
+## Disclaimer
+
+This template is provided "as is," without any guarantees regarding its functionality or suitability for any purpose.
