@@ -4,10 +4,15 @@
 
 # BotppFree
 
-Discord bot pro český Discord Server Linux CZ/SK
+Discord bot pro český Discord Server Linux CZ/SK - [Pozvánka](https://discord.gg/MBuvrRWQR6)
 
-[Pozvánka ZDE](https://discord.gg/MBuvrRWQR6)
+### Některé vlastnosti
 
+- obsahuje vlastní paměťovou datovou strukturu v podobě **fronty**
+- přidávání do fronty se provádí v samostatném vlákně s intervalem 2 hodin
+- pro zamezení redundance záznamů se při vyzvednutí záznamu z fronty záznam odstraní
+- výtisk náhodných zpráv do definovaného kanálu se děje v intervalu 33 minut
+ 
 ### ToDo
 
   - definovat rss deklarace v externím json
