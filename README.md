@@ -11,7 +11,8 @@ Discord bot pro český Discord Server Linux CZ/SK - [Pozvánka](https://discord
 - obsahuje vlastní paměťovou datovou strukturu v podobě **fronty**
 - přidávání do fronty se provádí v samostatném vlákně s intervalem 2 hodin
 - pro zamezení redundance záznamů se při vyzvednutí záznamu z fronty záznam odstraní
-- výtisk náhodných zpráv do definovaného kanálu se děje v intervalu 33 minut
+- výtisk náhodných zpráv do definovaného kanálu se děje v intervalu 10 minut
+- pokud je fronta prázdná, nevypíše se nic a čeká se na nové krmivo
  
 ### ToDo
 

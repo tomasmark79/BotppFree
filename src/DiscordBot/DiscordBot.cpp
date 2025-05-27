@@ -6,7 +6,7 @@
 #include <thread>
 #include <atomic>
 
-// #define IS_RELEASED_DISCORD_BOT
+#define IS_RELEASED_DISCORD_BOT
 
 #define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.bot++.key"
 const dpp::snowflake channelRss = 1375852042790244352;
@@ -415,9 +415,9 @@ int DiscordBot::printStringToChannel (const std::string& message, dpp::snowflake
 /// @param fullFeed If true, sends full feed; if false, sends random item
 void DiscordBot::sendRssFeedViaReply (const std::string& url, const dpp::slashcommand_t& event,
                                       bool allowEmbedded, bool fullFeed) {
-  FeedFetcher feedFetcher;
+  event.reply ("This feature is not implemented yet. Please try again later.");
+  // FeedFetcher feedFetcher;
   // std::string rssFeed = fullFeed ? feedFetcher.feedFromUrl (url) : feedFetcher.feedRandomFromUrl (url);
-
   // if (rssFeed.empty ()) {
   //   event.reply ("Failed to fetch RSS feed. Please try again later.");
   // } else {
@@ -436,9 +436,9 @@ void DiscordBot::sendRssFeedViaReply (const std::string& url, const dpp::slashco
 /// @param fullFeed If true, sends full feed; if false, sends random item
 void DiscordBot::sendRssFeedToChannel (const std::string& url, dpp::snowflake channelId,
                                        bool allowEmbedded, bool fullFeed) {
+  dpp::message msg (channelId, "This feature is not implemented yet. Please try again later.");
   // FeedFetcher feedFetcher;
   // std::string rssFeed = fullFeed ? feedFetcher.feedFromUrl (url) : feedFetcher.feedRandomFromUrl (url);
-
   // if (rssFeed.empty ()) {
   //   bot_->message_create (
   //       dpp::message (channelId, "Failed to fetch RSS feed. Please try again later."));
