@@ -10,7 +10,7 @@ Univerzální Discord bot.
 
 Bot v tuto dobu běží v testovacím módu na největším Discord Serveru Linux CZ/SK - [Pozvánka](https://discord.gg/MBuvrRWQR6)
 
- - Project je open source, a je možné jej použít kýmkoli a kdekoli
+ - project je open source, a je možné jej použít kýmkoli a kdekoli
  - stav projektu je nyní ve velmi ranné fázi testování
 
 ### Některé vlastnosti
