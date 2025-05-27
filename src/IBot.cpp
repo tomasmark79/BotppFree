@@ -4,7 +4,7 @@
 #include <IBot/IBot.hpp>
 #include <Assets/AssetContext.hpp>
 #include <Logger/Logger.hpp>
-#include <RssReader/RssReader.hpp>
+#include <RssManager/RssManager.hpp>
 
 #include <DiscordBot/DiscordBot.hpp>
 #include <Utils/Utils.hpp>
@@ -27,28 +27,28 @@ namespace dotname {
                    << "╰➤ " << AssetContext::getAssetsPath () << std::endl;
       auto logo = std::ifstream (AssetContext::getAssetsPath () / "logo.png");
 
-      DiscordBot dbot;
-      if (dbot.initCluster ()) {
-        LOG_I_STREAM << "Discord bot initialized successfully." << std::endl;
+      // DiscordBot dbot;
+      // if (dbot.initCluster ()) {
+      //   LOG_I_STREAM << "Discord bot initialized successfully." << std::endl;
+      // } else {
+      //   LOG_E_STREAM << "Failed to initialize Discord bot." << std::endl;
+      // }
+
+      // testy
+      FeedFetcher feedFetcher;
+      std::string rssFeed1 = feedFetcher.feedRandomFromUrl ("www.abclinuxu.cz/auto/abc.rss", 1);
+      if (rssFeed1.empty ()) {
+        LOG_E_STREAM << "Failed to fetch RSS feed." << std::endl;
       } else {
-        LOG_E_STREAM << "Failed to initialize Discord bot." << std::endl;
+        LOG_I_STREAM << "Fetched RSS feed successfully:\n" << rssFeed1 << std::endl;
       }
 
-      // // testy
-      // RssReader rssReader;
-      // std::string rssFeed1 = rssReader.feedRandomFromUrl ("www.abclinuxu.cz/auto/abc.rss", 1);
-      // if (rssFeed1.empty ()) {
-      //   LOG_E_STREAM << "Failed to fetch RSS feed." << std::endl;
-      // } else {
-      //   LOG_I_STREAM << "Fetched RSS feed successfully:\n" << rssFeed1 << std::endl;
-      // }
-
-      // std::string rssFeed2 = rssReader.feedRandomFromUrl ("https://www.root.cz/rss/clanky/");
-      // if (rssFeed2.empty ()) {
-      //   LOG_E_STREAM << "Failed to fetch RSS feed." << std::endl;
-      // } else {
-      //   LOG_I_STREAM << "Fetched RSS feed successfully:\n" << rssFeed2 << std::endl;
-      // }
+      std::string rssFeed2 = feedFetcher.feedRandomFromUrl ("https://www.root.cz/rss/clanky/");
+      if (rssFeed2.empty ()) {
+        LOG_E_STREAM << "Failed to fetch RSS feed." << std::endl;
+      } else {
+        LOG_I_STREAM << "Fetched RSS feed successfully:\n" << rssFeed2 << std::endl;
+      }
     }
   }
 
