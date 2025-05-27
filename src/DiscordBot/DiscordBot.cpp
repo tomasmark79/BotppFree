@@ -16,7 +16,7 @@ const bool noEmbedded = false;
 std::atomic<bool> isPollingPrintFeedRunning (false);
 std::atomic<bool> stopPollingPrintFeed (false);
 #ifdef IS_RELEASED_DISCORD_BOT
-int pollingPrintFeedIntervalInSec = 60 * 10;
+int pollingPrintFeedIntervalInSec = 60 * 60; // 1 hour
 #else
 int pollingPrintFeedIntervalInSec = 3; // test purpose
 #endif
@@ -79,16 +79,16 @@ bool DiscordBot::startPollingFetchFeed () {
           result = rssManager.fetchFeed ("https://blog.root.cz/rss/");
           result = rssManager.fetchFeed ("https://www.root.cz/rss/skoleni");
           result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/abc.rss");
-          result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/diskuse.rss");
+          //result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/diskuse.rss");
           result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/hardware.rss");
           result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/software.rss");
           result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/zpravicky.rss");
-          result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/slovnik.rss");
-          result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/kdojekdo.rss");
-          result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/blog.rss");
+          //result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/slovnik.rss");
+          //result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/kdojekdo.rss");
+          //result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/blog.rss");
           result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/ovladace.rss");
-          result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/blogDigest.rss");
-          result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/faq.rss");
+          //result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/blogDigest.rss");
+          //result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/faq.rss");
 
           LOG_I_STREAM << "Thread pollingThreadFetchFeed: Fetched " << rssManager.getItemCount ()
                        << " items from the feeds." << std::endl;
