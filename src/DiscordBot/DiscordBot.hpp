@@ -42,7 +42,10 @@ public:
 private:
   std::string getLinuxFastfetchCpp ();
   std::unique_ptr<dpp::cluster> bot_;
-  bool startPolling ();
+
+  bool startPollingPrintFeed ();
+  bool startPollingFetchFeed ();
+
   void loadOnSlashCommands ();
   void loadOnReadyCommands ();
   int getTokenFromFile (std::string& token);
