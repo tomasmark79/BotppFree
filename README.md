@@ -16,6 +16,7 @@ Discord bot pro český Discord Server Linux CZ/SK - [Pozvánka](https://discord
  
 ### ToDo
 
+  - etxerní příkazy pro fetch feed jsou do odvolání vypnuty
   - definovat rss deklarace v externím json
   - ukládat seenHashes do externího json (v produkci výtisk vždy bez duplikátů)
 
