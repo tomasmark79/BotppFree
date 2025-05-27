@@ -10,8 +10,7 @@ Discord bot pro český Discord Server Linux CZ/SK
 
 ### ToDo
 
- - vytvořit datastrukturu zásobník pro záznamy a díky tomu nezobrazovat již zobrazené články
- - definovat configuraci rss vstupů v json
+  - definovat rss deklarace v externím json
 
  ---
 
