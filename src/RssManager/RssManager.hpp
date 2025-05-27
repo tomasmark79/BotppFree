@@ -86,6 +86,19 @@ public:
   FeedPrinter () = default;
   ~FeedPrinter () = default;
 
+  // Returns a simple markdown link format for the item
+  // Example: [Title](Link)
+  // This is useful for creating a simple clickable link in markdown format
+  std::string getSimpleItemAsUrl (const RSSItem& item) {
+    std::string result = "[" + item.title_ + "](" + item.link_ + ")";
+    result += "\n";
+    return result;
+  }
+
+  std::string getItemTitle(const RSSItem& item) {
+    return item.title_;
+  }
+
   std::string printItem (const RSSItem& item) {
     std::string result = "Title: " + item.title_ + "\n";
     result += "Link: " + item.link_ + "\n";
@@ -186,9 +199,14 @@ public:
   ~RssManager () = default;
 
   // Fetch RSS feed from URL
-  int fetchFeed (const std::string& url) {
+   int fetchFeed (const std::string& url) {
     FeedFetcher fetcher;
     return fetcher.fetchFeed (url);
+  }
+
+  // get item count
+  int getItemCount () const {
+    return rssFeeds.getItemCount ();
   }
 
   // Get a random item from the fetched feed
@@ -197,10 +215,15 @@ public:
     return picker.pickUpRandomItem ();
   }
 
-  // Print the item details
-  std::string printItem (const RSSItem& item) {
+  std::string getSimpleItemAsUrl (const RSSItem& item) {
     FeedPrinter printer;
-    return printer.printItem (item);
+    return printer.getSimpleItemAsUrl (item);
+  }
+
+  // Print the item details
+  std::string getItemTitle (const RSSItem& item) {
+    FeedPrinter printer;
+    return printer.getItemTitle (item);
   }
 
   std::string printItemShort (const RSSItem& item) {

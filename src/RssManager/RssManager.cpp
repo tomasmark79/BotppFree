@@ -66,6 +66,7 @@ RSSFeed& FeedParser::parseRSSToDataStructure (const std::string& xmlData) {
   // Parse items
   tinyxml2::XMLElement* item = firstItem;
 
+  int totalParsedItems = 0;
   while (item) {
     RSSItem localRssItem;
 
@@ -99,6 +100,7 @@ RSSFeed& FeedParser::parseRSSToDataStructure (const std::string& xmlData) {
       if (!localRssItem.title_.empty () && !localRssItem.link_.empty ()) {
         rssFeeds.addItem (localRssItem);
         seenHashes.addHash (localRssItem.hash_); // Add hash to seen hashes
+        totalParsedItems++;
       } else {
         LOG_W_STREAM << "Skipping item with missing title or link." << std::endl;
       }
@@ -106,7 +108,7 @@ RSSFeed& FeedParser::parseRSSToDataStructure (const std::string& xmlData) {
     item = item->NextSiblingElement ("item");
   }
 
-  LOG_I_STREAM << "Parsed " << rssFeeds.getItemCount () << " " << (isRSS2 ? "RSS2" : "RDF RSS")
+  LOG_I_STREAM << "Parsed " << totalParsedItems << " " << (isRSS2 ? "RSS2" : "RDF RSS")
                << " items - " << "Skipped " << skippedItems.size () << " duplicate items."
                << std::endl;
 
@@ -117,6 +119,7 @@ RSSFeed& FeedParser::parseRSSToDataStructure (const std::string& xmlData) {
 /// @param url The URL of the RSS feed to fetch.
 /// @return Count of items fetched from the RSS feed, or -1 on error.
 int FeedFetcher::fetchFeed (std::string url) {
+  LOG_D_STREAM << "---- Fetching feed ---- " << url << std::endl;
   CURL* curl;
   CURLcode res;
   std::string rawRssBuffer;
@@ -134,10 +137,11 @@ int FeedFetcher::fetchFeed (std::string url) {
       LOG_E_STREAM << "curl_easy_perform() failed: " << curl_easy_strerror (res) << std::endl;
     } else {
       // LOG_D_STREAM << "Downloaded content:\n" << rawRssBuffer << std::endl;
+      int oldItemCount = rssFeeds.getItemCount ();
       rssFeeds = feedParser.parseRSSToDataStructure (rawRssBuffer);
-      if (rssFeeds.getItemCount () > 0) {
-        LOG_D_STREAM << "Fetched " << rssFeeds.getItemCount () << " items from the feed."
-                     << std::endl;
+      if (rssFeeds.getItemCount () > oldItemCount) {
+        LOG_D_STREAM << "Fetched " << (rssFeeds.getItemCount () - oldItemCount)
+                     << " new items from the RSS feed." << std::endl;
       } else {
         LOG_E_STREAM << "No items found in the RSS feed." << std::endl;
         curl_easy_cleanup (curl);
