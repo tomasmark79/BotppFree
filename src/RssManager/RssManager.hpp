@@ -101,6 +101,28 @@ public:
     }
     return result;
   }
+
+  std::string printItemShort (const RSSItem& item) {
+    std::string result = "Titulek: " + item.title_ + "\n";
+    result += "Odkaz: " + item.link_ + "\n";
+    result += "Popis: " + item.description_ + "\n";
+    if (!item.pubDate_.empty ()) {
+      result += "Publikováno: " + item.pubDate_ + "\n";
+    }
+    return result;
+  }
+
+  std::string printFeed (const RSSFeed& feed) {
+    std::string result = "RSS Feed: " + feed.title + "\n";
+    result += "Description: " + feed.description + "\n";
+    result += "Link: " + feed.link + "\n\n";
+
+    for (const auto& item : feed.items) {
+      result += printItem (item) + "\n";
+      result += "------------------------\n";
+    }
+    return result;
+  }
 };
 
 class FeedPicker {
@@ -179,6 +201,11 @@ public:
   std::string printItem (const RSSItem& item) {
     FeedPrinter printer;
     return printer.printItem (item);
+  }
+
+  std::string printItemShort (const RSSItem& item) {
+    FeedPrinter printer;
+    return printer.printItemShort (item);
   }
 
   // Get the size of the feed queue

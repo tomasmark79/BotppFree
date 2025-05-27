@@ -42,13 +42,21 @@ public:
 private:
   std::string getLinuxFastfetchCpp ();
   std::unique_ptr<dpp::cluster> bot_;
+  int getTokenFromFile (std::string& token);
 
   bool startPollingPrintFeed ();
   bool startPollingFetchFeed ();
 
+  int printStringToChannel (const std::string& str, dpp::snowflake channelId,
+                               const dpp::slashcommand_t& event, bool allowEmbedded);
+
+                               
   void loadOnSlashCommands ();
   void loadOnReadyCommands ();
-  int getTokenFromFile (std::string& token);
+
+  
+  
+  
   void printFullFeedToChannel (const std::string& url, dpp::snowflake channelId,
                                const dpp::slashcommand_t& event, bool allowEmbedded);
   void printRandomFeedToChannel (const std::string& url, dpp::snowflake channelId,
