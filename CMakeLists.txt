@@ -66,13 +66,13 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/${LIBRARY_NAME}/
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 list(APPEND CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
 find_package(fmt REQUIRED)
+find_package(nlohmann_json REQUIRED)
 find_package(tinyxml2 REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(Opus REQUIRED)
 find_package(CURL REQUIRED)
 find_package(OpenSSL REQUIRED)
-
-# find_package(nlohmann_json REQUIRED) find_package(yaml-cpp REQUIRED)
+#find_package(yaml-cpp REQUIRED)
 
 # ==============================================================================
 # CPM.cmake dependencies - take care conflicts
@@ -183,7 +183,7 @@ target_link_libraries(
     PUBLIC fmt::fmt
     PUBLIC ZLIB::ZLIB
     PUBLIC tinyxml2::tinyxml2
-    # PRIVATE nlohmann_json::nlohmann_json PRIVATE yaml-cpp
+    PRIVATE nlohmann_json::nlohmann_json
     PRIVATE Opus::opus
     PUBLIC CURL::libcurl
     PRIVATE OpenSSL::SSL

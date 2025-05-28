@@ -13,8 +13,6 @@ size_t WriteCallback (void* contents, size_t size, size_t nmemb, void* userp) {
 /// @param xmlData The XML data of the RSS feed as a string.
 /// @return A reference to the populated RSSFeed data structure.
 RSSFeed& FeedParser::parseRSSToDataStructure (const std::string& xmlData) {
-  std::vector<std::string> skippedItems;
-
   tinyxml2::XMLDocument doc;
   doc.Parse (xmlData.c_str ());
 
@@ -91,25 +89,29 @@ RSSFeed& FeedParser::parseRSSToDataStructure (const std::string& xmlData) {
     localRssItem.hash_ = std::to_string (
         hasher (localRssItem.title_ + localRssItem.link_ + localRssItem.description_));
 
-    // avoid adding duplicate items
-    if (seenHashes.contains (localRssItem.hash_)) {
-      skippedItems.push_back (localRssItem.hash_);
-
+    // Check for duplicates using volatileHashes
+    if (volatileHashes.contains (localRssItem.hash_)) {
+      LOG_W_STREAM << "Skipping duplicate item with hash: " << localRssItem.hash_ << std::endl;
+      item = item->NextSiblingElement ("item");
+      continue; // Skip to the next item
     } else {
-      // Add item to feed if it has a title and link
-      if (!localRssItem.title_.empty () && !localRssItem.link_.empty ()) {
-        rssFeeds.addItem (localRssItem);
-        seenHashes.addHash (localRssItem.hash_); // Add hash to seen hashes
-        totalParsedItems++;
-      } else {
-        LOG_W_STREAM << "Skipping item with missing title or link." << std::endl;
-      }
+      // Add hash to seen hashes
+      volatileHashes.addHash (localRssItem.hash_);
     }
+
+    // Add item to feed if it has a title and link
+    if (!localRssItem.title_.empty () && !localRssItem.link_.empty ()) {
+      rssFeeds.addItem (localRssItem);
+      totalParsedItems++;
+    } else {
+      LOG_W_STREAM << "Skipping item with missing title or link." << std::endl;
+    }
+
     item = item->NextSiblingElement ("item");
   }
 
   LOG_I_STREAM << "Parsed " << totalParsedItems << " " << (isRSS2 ? "RSS2" : "RDF RSS")
-               << " items - " << "Skipped " << skippedItems.size () << " duplicate items."
+               << " items - " << "Skipped " << "skippedItems.size ()" << " duplicate items."
                << std::endl;
 
   return rssFeeds;
@@ -118,7 +120,7 @@ RSSFeed& FeedParser::parseRSSToDataStructure (const std::string& xmlData) {
 /// @brief Fetches an RSS feed from a given URL and populates the RSSFeed data structure.
 /// @param url The URL of the RSS feed to fetch.
 /// @return Count of items fetched from the RSS feed, or -1 on error.
-int FeedFetcher::fetchFeed (std::string url) {
+int FeedFetcher::fetchFeed (std::string url, bool embed) {
   LOG_D_STREAM << "---- Fetching feed ---- " << url << std::endl;
   CURL* curl;
   CURLcode res;

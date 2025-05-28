@@ -36,12 +36,12 @@ class DotNameCppRecipe(ConanFile):
     def requirements(self):
         self.requires("fmt/[~11.1]") # required by cpm package
         self.requires("zlib/[~1.3]")
+        self.requires("nlohmann_json/[~3.11]")
         self.requires("opus/1.5.2")
         self.requires("openssl/3.4.1")
         self.requires("libcurl/8.12.1")
         self.requires("tinyxml2/11.0.0")
         # self.requires("gtest/1.16.0") # if cpm not used
-        # self.requires("nlohmann_json/[~3.11]")
         # self.requires("yaml-cpp/0.8.0")
 
     def build_requirements(self):

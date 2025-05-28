@@ -20,6 +20,8 @@ namespace dotname {
     IBot ();
     IBot (const std::filesystem::path& assetsPath);
     ~IBot ();
+
+  private:
   };
 
 } // namespace dotname
