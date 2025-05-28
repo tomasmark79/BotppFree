@@ -18,10 +18,10 @@ int RssManager::initialize () {
   if (!std::filesystem::exists (getUrlsPath ())) {
     nlohmann::json defaultUrls = nlohmann::json::array (
         { { { "url", "https://www.root.cz/rss/clanky/" }, { "embedded", true } },
-          // { { "url", "https://www.lupa.cz/rss/clanky/" }, { "embedded", true } },
-          // { { "url", "https://www.root.cz/rss/zpravicky/" }, { "embedded", true } },
-          // { { "url", "https://www.root.cz/rss/skoleni" }, { "embedded", true } },
-          // { { "url", "https://www.abclinuxu.cz/auto/zpravicky.rss" }, { "embedded", false } },
+          { { "url", "https://www.lupa.cz/rss/clanky/" }, { "embedded", true } },
+          { { "url", "https://www.root.cz/rss/zpravicky/" }, { "embedded", true } },
+          { { "url", "https://www.root.cz/rss/skoleni" }, { "embedded", true } },
+          { { "url", "https://www.abclinuxu.cz/auto/zpravicky.rss" }, { "embedded", false } },
           { { "url", "https://www.abclinuxu.cz/auto/abc.rss" }, { "embedded", false } } });
 
     std::ofstream file (getUrlsPath ());
@@ -237,7 +237,7 @@ int RssManager::fetchFeed (const std::string& url, bool embedded) {
 }
 
 int RssManager::fetchAllFeeds () {
-  checkAndReloadFiles();
+  checkAndReloadFiles ();
 
   int totalItems = 0;
 

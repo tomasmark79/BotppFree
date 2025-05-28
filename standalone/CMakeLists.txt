@@ -6,6 +6,10 @@ cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 # |s|t|a|n|d|a|l|o|n|e|
 # +-+-+-+-+-+-+-+-+-+-+
 
+
+set(AVX1_EXITCODE 0 CACHE STRING "AVX1 test exit code")
+set(AVX2_EXITCODE 0 CACHE STRING "AVX2 test exit code")
+
 cmake_policy(SET CMP0048 NEW) # project() command manages VERSION variables
 cmake_policy(SET CMP0076 NEW) # target_sources() command creates usage requirements
 cmake_policy(SET CMP0091 NEW) # MSVC runtime library flags are selected by an abstraction
