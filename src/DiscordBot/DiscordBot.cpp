@@ -9,7 +9,7 @@
 // Discord message max length (as per Discord API docs)
 constexpr size_t DISCORD_MAX_MSG_LEN = 2000;
 
-// #define IS_RELEASED_DISCORD_BOT
+#define IS_RELEASED_DISCORD_BOT
 
 #define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.bot++.key"
 const dpp::snowflake channelRss = 1375852042790244352;
@@ -19,11 +19,11 @@ DiscordBot::DiscordBot () {
   rss.initialize ();
 }
 
-// Polling print feed every 47 minutes
+// Polling print feed every 23 minutes
 std::atomic<bool> isPollingPrintFeedRunning (false);
 std::atomic<bool> stopPollingPrintFeed (false);
 #ifdef IS_RELEASED_DISCORD_BOT
-int pollingPrintFeedIntervalInSec = 60 * 47; // 47 minutes
+int pollingPrintFeedIntervalInSec = 60 * 23; // 23 minutes
 #else
 int pollingPrintFeedIntervalInSec = 1; // test purpose
 #endif
