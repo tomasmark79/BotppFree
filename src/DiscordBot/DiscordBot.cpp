@@ -6,26 +6,24 @@
 #include <thread>
 #include <atomic>
 
+// Discord message max length (as per Discord API docs)
+constexpr size_t DISCORD_MAX_MSG_LEN = 2000;
+
 // #define IS_RELEASED_DISCORD_BOT
 
 #define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.bot++.key"
 const dpp::snowflake channelRss = 1375852042790244352;
-const bool noEmbedded = false;
-RssManager rssManager;
+RssManager rss;
 
 DiscordBot::DiscordBot () {
-  rssManager.createFiles (); // Once per app start
-  rssManager.loadUrlListFromFile ();
-  rssManager.loadSeenHashesFromFile ();
-  rssManager.loadVolatileHashes ();
+  rss.initialize ();
 }
 
 // Polling print feed every 47 minutes
 std::atomic<bool> isPollingPrintFeedRunning (false);
 std::atomic<bool> stopPollingPrintFeed (false);
 #ifdef IS_RELEASED_DISCORD_BOT
-// int pollingPrintFeedIntervalInSec = 60 * 60; // 1 hour
-int pollingPrintFeedIntervalInSec = 20;
+int pollingPrintFeedIntervalInSec = 60 * 47; // 47 minutes
 #else
 int pollingPrintFeedIntervalInSec = 1; // test purpose
 #endif
@@ -34,16 +32,16 @@ bool DiscordBot::startPollingPrintFeed () {
     std::thread pollingThreadPrintFeed ([&] () -> void {
       while (!stopPollingPrintFeed.load ()) {
         try {
-          bool* isEmbed; // Default to false
-          RSSItem randomItem = rssManager.getRandomItem ();
-          if (!randomItem.title_.empty ()) {
-            int remainingItems = rssManager.getFeedQueueSize ();
-            LOG_I_STREAM << rssManager.getItemTitle (randomItem) << " - rem: " << remainingItems
-                         << std::endl;
+         
+
+          RSSItem item = rss.getRandomItem ();
+         
+          if (!item.title.empty ()) {
+            LOG_D_STREAM << "Random item: " << item.title << " emb: " << item.embedded << std::endl;
+
 // // Discord Channel Output
 #ifdef IS_RELEASED_DISCORD_BOT
-            printStringToChannel (rssManager.getSimpleItemAsUrl (randomItem), channelRss, {},
-                                  randomItem.isEmbed_);
+            printStringToChannel (item.toMarkdownLink (), channelRss, {}, item.embedded);
 #endif
 
           } else {
@@ -56,7 +54,6 @@ bool DiscordBot::startPollingPrintFeed () {
           isPollingPrintFeedRunning.store (false);
         }
         std::this_thread::sleep_for (std::chrono::seconds (pollingPrintFeedIntervalInSec));
-        // std::this_thread::sleep_for (std::chrono::milliseconds (40));
       }
     });
     pollingThreadPrintFeed.detach ();
@@ -64,14 +61,14 @@ bool DiscordBot::startPollingPrintFeed () {
   return true;
 }
 
-// Polling fetch feed 12 hours
+// Polling fetch feeds
 std::atomic<bool> isPollingFetchFeedRunning (false);
 std::atomic<bool> stopPollingFetchFeed (false);
 
 #ifdef IS_RELEASED_DISCORD_BOT
 int pollingFetchFeedIntervalInSec = 60 * 60 * 2; // 2 hours
 #else
-int pollingFetchFeedIntervalInSec = 20; // test purpose
+int pollingFetchFeedIntervalInSec = 5; // test purpose
 #endif
 
 bool DiscordBot::startPollingFetchFeed () {
@@ -79,13 +76,9 @@ bool DiscordBot::startPollingFetchFeed () {
     std::thread pollingThreadFetchFeed ([&] () -> void {
       while (!stopPollingFetchFeed.load ()) {
         try {
-          RssManager rssManager;
-          rssManager.loadUrlListFromFile ();
-          rssManager.loadSeenHashesFromFile ();
-          rssManager.fetchFeeds ();
 
-          LOG_I_STREAM << "Thread pollingThreadFetchFeed: Fetched " << rssManager.getItemCount ()
-                       << " items from the feeds." << std::endl;
+          rss.fetchAllFeeds ();
+
           isPollingPrintFeedRunning.store (true);
         } catch (const std::runtime_error& e) {
           LOG_E_STREAM << "Error: " << e.what () << std::endl;
@@ -138,6 +131,7 @@ int DiscordBot::initCluster () {
 void DiscordBot::loadOnSlashCommands () {
 
   bot_->on_slashcommand ([&, this] (const dpp::slashcommand_t& event) {
+    bool noEmbedded = false;
     // root.cz
     if (event.command.get_command_name () == "rootclanky") {
       printFullFeedToChannel ("https://www.root.cz/rss/clanky/", channelRss, event, noEmbedded);

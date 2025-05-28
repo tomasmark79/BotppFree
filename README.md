@@ -2,11 +2,11 @@
 [![MacOS](https://github.com/tomasmark79/BotppFree/actions/workflows/macos.yml/badge.svg)](https://github.com/tomasmark79/BotppFree/actions/workflows/macos.yml)
 <!-- [![Windows](https://github.com/tomasmark79/BotppFree/actions/workflows/windows.yml/badge.svg)](https://github.com/tomasmark79/BotppFree/actions/workflows/windows.yml)   -->
 
-# BotppFree
+# Bot++
 
-Univerzální Discord bot.
+Univerzální Discord Bot s podporou RSS čtečky.
  
- > Cílem bota je v tuto dobu především servírování novinek z definovaných zdrojů RSS do specifického kanálu
+ > Cílem bota servírování novinek z definovaných zdrojů RSS do specifického kanálu.
 
 Bot v tuto dobu běží v testovacím módu na největším Discord Serveru Linux CZ/SK - [Pozvánka](https://discord.gg/MBuvrRWQR6)
 
@@ -16,16 +16,15 @@ Bot v tuto dobu běží v testovacím módu na největším Discord Serveru Linu
 ### Některé vlastnosti
 
 - obsahuje vlastní paměťovou datovou strukturu v podobě **fronty**
-- přidávání do fronty se provádí v samostatném vlákně s intervalem 2 hodin
-- pro zamezení redundance záznamů se při vyzvednutí záznamu z fronty záznam odstraní
-- výtisk náhodných zpráv do definovaného kanálu se děje v intervalu 10 minut
-- pokud je fronta prázdná, nevypíše se nic a čeká se na nové krmivo
+- přidávání do fronty se provádí v samostatném vlákně
+- zamezení redundance vystavených článků (i po restartu programu) 
+- výtisk náhodných zpráv do definovaného kanálu se děje v samostatném vlákně
+- pokud je fronta prázdná, nevypíše se nic a čeká se na nové položky, které RSS zdroj poskytne
+- za běhu programu je možné editovat konfiguraci se zdroji RSS
  
 ### ToDo
 
   - etxerní příkazy pro fetch feed jsou do odvolání vypnuty
-  - definovat rss deklarace v externím json
-  - ukládat seenHashes do externího json (v produkci výtisk vždy bez duplikátů)
 
  ---
 

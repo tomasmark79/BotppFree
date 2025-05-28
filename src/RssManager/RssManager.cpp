@@ -1,158 +1,354 @@
 #include "RssManager.hpp"
 #include <Logger/Logger.hpp>
-#include <random>
 #include <curl/curl.h>
+#include <fstream>
+#include <random>
 
-// callback function for curl to write data into a string
+// CURL callback
 size_t WriteCallback (void* contents, size_t size, size_t nmemb, void* userp) {
   ((std::string*)userp)->append ((char*)contents, size * nmemb);
   return size * nmemb;
 }
 
-/// @brief Parses an RSS feed from XML data and populates the RSSFeed data structure.
-/// @param xmlData The XML data of the RSS feed as a string.
-/// @return A reference to the populated RSSFeed data structure.
-RSSFeed& FeedParser::parseRSSToDataStructure (const std::string& xmlData) {
+RssManager::RssManager () : rng_ (std::random_device{}()) {
+}
+
+int RssManager::initialize () {
+  // Create default files if they don't exist
+  if (!std::filesystem::exists (getUrlsPath ())) {
+    nlohmann::json defaultUrls = nlohmann::json::array (
+        { { { "url", "https://www.root.cz/rss/clanky/" }, { "embedded", true } },
+          // { { "url", "https://www.lupa.cz/rss/clanky/" }, { "embedded", true } },
+          // { { "url", "https://www.root.cz/rss/zpravicky/" }, { "embedded", true } },
+          // { { "url", "https://www.root.cz/rss/skoleni" }, { "embedded", true } },
+          // { { "url", "https://www.abclinuxu.cz/auto/zpravicky.rss" }, { "embedded", false } },
+          { { "url", "https://www.abclinuxu.cz/auto/abc.rss" }, { "embedded", false } } });
+
+    std::ofstream file (getUrlsPath ());
+    if (!file.is_open ())
+      return -1;
+    file << defaultUrls.dump (4);
+  }
+
+  if (!std::filesystem::exists (getHashesPath ())) {
+    nlohmann::json defaultHashes = nlohmann::json::array ();
+    std::ofstream file (getHashesPath ());
+    if (!file.is_open ())
+      return -1;
+    file << defaultHashes.dump (4);
+  }
+
+  // Initialize timestamps after loading
+  if (std::filesystem::exists (getUrlsPath ())) {
+    urlsLastModified_ = std::filesystem::last_write_time (getUrlsPath ());
+  }
+  if (std::filesystem::exists (getHashesPath ())) {
+    hashesLastModified_ = std::filesystem::last_write_time (getHashesPath ());
+  }
+
+  return loadUrls () == 0 && loadSeenHashes () == 0 ? 0 : -1;
+}
+
+int RssManager::loadUrls () {
+  std::ifstream file (getUrlsPath ());
+  if (!file.is_open ())
+    return -1;
+
+  nlohmann::json jsonData;
+  file >> jsonData;
+
+  urls_.clear ();
+  for (const auto& item : jsonData) {
+    if (item.is_object () && item.contains ("url")) {
+      std::string url = item["url"].get<std::string> ();
+      bool embedded = item.contains ("embedded") ? item["embedded"].get<bool> () : false;
+      urls_.emplace_back (url, embedded);
+    } else if (item.is_string ()) {
+      // Backwards compatibility - treat strings as non-embedded
+      urls_.emplace_back (item.get<std::string> (), false);
+    }
+  }
+
+  LOG_I_STREAM << "Loaded " << urls_.size () << " RSS URLs." << std::endl;
+  return 0;
+}
+
+int RssManager::loadSeenHashes () {
+  std::ifstream file (getHashesPath ());
+  if (!file.is_open ())
+    return -1;
+
+  nlohmann::json jsonData;
+  file >> jsonData;
+
+  seenHashes_.clear ();
+  for (const auto& hash : jsonData) {
+    if (hash.is_string ()) {
+      seenHashes_.insert (hash.get<std::string> ());
+    }
+  }
+
+  LOG_I_STREAM << "Loaded " << seenHashes_.size () << " seen hashes." << std::endl;
+  return 0;
+}
+
+int RssManager::saveSeenHash (const std::string& hash) {
+  seenHashes_.insert (hash);
+
+  nlohmann::json jsonData = nlohmann::json::array ();
+  for (const auto& h : seenHashes_) {
+    jsonData.push_back (h);
+  }
+
+  std::ofstream file (getHashesPath ());
+  if (!file.is_open ())
+    return -1;
+  file << jsonData.dump (4);
+  return 0;
+}
+
+std::string RssManager::downloadFeed (const std::string& url) {
+  CURL* curl = curl_easy_init ();
+  if (!curl)
+    return "";
+
+  std::string buffer;
+  curl_easy_setopt (curl, CURLOPT_URL, url.c_str ());
+  curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+  curl_easy_setopt (curl, CURLOPT_WRITEDATA, &buffer);
+  curl_easy_setopt (curl, CURLOPT_FOLLOWLOCATION, 1L);
+  curl_easy_setopt (curl, CURLOPT_SSL_VERIFYPEER, 0L);
+
+  CURLcode res = curl_easy_perform (curl);
+  curl_easy_cleanup (curl);
+
+  if (res != CURLE_OK) {
+    LOG_E_STREAM << "CURL error: " << curl_easy_strerror (res) << std::endl;
+    return "";
+  }
+
+  return buffer;
+}
+
+RSSFeed RssManager::parseRSS (const std::string& xmlData, bool embedded) {
+  RSSFeed feed;
   tinyxml2::XMLDocument doc;
   doc.Parse (xmlData.c_str ());
 
-  tinyxml2::XMLElement* rssElement = doc.FirstChildElement ("rss");
-  tinyxml2::XMLElement* rdfElement = doc.FirstChildElement ("rdf:RDF");
   tinyxml2::XMLElement* channel = nullptr;
   tinyxml2::XMLElement* firstItem = nullptr;
 
-  bool isRSS2 = false;
-
-  if (rssElement) {
-    // RSS 2.0 format
-    isRSS2 = true;
+  // Try RSS 2.0 format
+  if (auto rssElement = doc.FirstChildElement ("rss")) {
     channel = rssElement->FirstChildElement ("channel");
     if (channel) {
       firstItem = channel->FirstChildElement ("item");
     }
-  } else if (rdfElement) {
-    // RSS 1.0 (RDF) format
+  }
+  // Try RSS 1.0 format
+  else if (auto rdfElement = doc.FirstChildElement ("rdf:RDF")) {
     channel = rdfElement->FirstChildElement ("channel");
     firstItem = rdfElement->FirstChildElement ("item");
-  } else {
-    LOG_E_STREAM << "Error: No supported RSS root element found." << std::endl;
-    return rssFeeds;
   }
 
   if (!channel) {
-    LOG_E_STREAM << "Error: RSS feed is not valid - no channel found." << std::endl;
-    return rssFeeds;
+    LOG_E_STREAM << "No valid RSS channel found." << std::endl;
+    return feed;
   }
 
-  // Parse channel info (same for both formats)
-  if (auto titleElement = channel->FirstChildElement ("title")) {
-    rssFeeds.title = titleElement->GetText () ? titleElement->GetText () : "";
+  // Parse channel info
+  if (auto titleEl = channel->FirstChildElement ("title")) {
+    feed.title = titleEl->GetText () ? titleEl->GetText () : "";
   }
-  if (auto descElement = channel->FirstChildElement ("description")) {
-    rssFeeds.description = descElement->GetText () ? descElement->GetText () : "";
+  if (auto descEl = channel->FirstChildElement ("description")) {
+    feed.description = descEl->GetText () ? descEl->GetText () : "";
   }
-  if (auto linkElement = channel->FirstChildElement ("link")) {
-    rssFeeds.link = linkElement->GetText () ? linkElement->GetText () : "";
-  }
-  if (auto languageElement = channel->FirstChildElement ("language")) {
-    rssFeeds.language = languageElement->GetText () ? languageElement->GetText () : "";
-  }
-  if (auto pubDateElement = channel->FirstChildElement ("pubDate")) {
-    rssFeeds.pubDate = pubDateElement->GetText () ? pubDateElement->GetText () : "";
+  if (auto linkEl = channel->FirstChildElement ("link")) {
+    feed.link = linkEl->GetText () ? linkEl->GetText () : "";
   }
 
   // Parse items
-  tinyxml2::XMLElement* item = firstItem;
+  int newItems = 0;
+  for (auto item = firstItem; item; item = item->NextSiblingElement ("item")) {
+    RSSItem rssItem;
+    rssItem.embedded = embedded; // Set embedded flag from URL config
 
-  int totalParsedItems = 0;
-  while (item) {
-    RSSItem localRssItem;
-
-    if (auto titleElement = item->FirstChildElement ("title")) {
-      localRssItem.title_ = titleElement->GetText () ? titleElement->GetText () : "";
+    if (auto titleEl = item->FirstChildElement ("title")) {
+      rssItem.title = titleEl->GetText () ? titleEl->GetText () : "";
     }
-    if (auto linkElement = item->FirstChildElement ("link")) {
-      localRssItem.link_ = linkElement->GetText () ? linkElement->GetText () : "";
+    if (auto linkEl = item->FirstChildElement ("link")) {
+      rssItem.link = linkEl->GetText () ? linkEl->GetText () : "";
     }
-    if (auto descElement = item->FirstChildElement ("description")) {
-      localRssItem.description_ = descElement->GetText () ? descElement->GetText () : "";
+    if (auto descEl = item->FirstChildElement ("description")) {
+      rssItem.description = descEl->GetText () ? descEl->GetText () : "";
     }
-    if (auto pubDateElement = item->FirstChildElement ("pubDate")) {
-      localRssItem.pubDate_ = pubDateElement->GetText () ? pubDateElement->GetText () : "";
-    }
-    if (auto languageElement = item->FirstChildElement ("language")) {
-      localRssItem.language_ = languageElement->GetText () ? languageElement->GetText () : "";
+    if (auto dateEl = item->FirstChildElement ("pubDate")) {
+      rssItem.pubDate = dateEl->GetText () ? dateEl->GetText () : "";
     }
 
-    // hash generation
-    std::hash<std::string> hasher;
-    localRssItem.hash_ = std::to_string (
-        hasher (localRssItem.title_ + localRssItem.link_ + localRssItem.description_));
+    if (rssItem.title.empty () || rssItem.link.empty ())
+      continue;
 
-    // Check for duplicates using volatileHashes
-    if (volatileHashes.contains (localRssItem.hash_)) {
-      LOG_W_STREAM << "Skipping duplicate item with hash: " << localRssItem.hash_ << std::endl;
-      item = item->NextSiblingElement ("item");
-      continue; // Skip to the next item
-    } else {
-      // Add hash to seen hashes
-      volatileHashes.addHash (localRssItem.hash_);
+    rssItem.generateHash ();
+
+    // Skip if already seen
+    if (seenHashes_.find (rssItem.hash) != seenHashes_.end ()) {
+      LOG_D_STREAM << "Skipping duplicate item: " << rssItem.title << std::endl;
+      continue;
     }
-
-    // Add item to feed if it has a title and link
-    if (!localRssItem.title_.empty () && !localRssItem.link_.empty ()) {
-      rssFeeds.addItem (localRssItem);
-      totalParsedItems++;
-    } else {
-      LOG_W_STREAM << "Skipping item with missing title or link." << std::endl;
-    }
-
-    item = item->NextSiblingElement ("item");
+    feed.addItem (rssItem);
+    newItems++;
   }
 
-  LOG_I_STREAM << "Parsed " << totalParsedItems << " " << (isRSS2 ? "RSS2" : "RDF RSS")
-               << " items - " << "Skipped " << "skippedItems.size ()" << " duplicate items."
+  LOG_I_STREAM << "Parsed " << newItems
+               << " new items from RSS feed (embedded: " << (embedded ? "true" : "false") << ")."
                << std::endl;
-
-  return rssFeeds;
+  return feed;
 }
 
-/// @brief Fetches an RSS feed from a given URL and populates the RSSFeed data structure.
-/// @param url The URL of the RSS feed to fetch.
-/// @return Count of items fetched from the RSS feed, or -1 on error.
-int FeedFetcher::fetchFeed (std::string url, bool embed) {
-  LOG_D_STREAM << "---- Fetching feed ---- " << url << std::endl;
-  CURL* curl;
-  CURLcode res;
-  std::string rawRssBuffer;
-  curl = curl_easy_init ();
-  if (curl) {
-    curl_easy_setopt (curl, CURLOPT_SSL_VERIFYPEER, 0L); /* temporary - todo cert */
-    curl_easy_setopt (curl, CURLOPT_URL, url.c_str ());
-    curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-    curl_easy_setopt (curl, CURLOPT_WRITEDATA, &rawRssBuffer);
-    curl_easy_setopt (curl, CURLOPT_FOLLOWLOCATION, 1L); // -L
+int RssManager::fetchFeed (const std::string& url, bool embedded) {
+  LOG_D_STREAM << "Fetching feed: " << url << " (embedded: " << (embedded ? "true" : "false") << ")"
+               << std::endl;
 
-    res = curl_easy_perform (curl);
+  std::string xmlData = downloadFeed (url);
+  if (xmlData.empty ())
+    return -1;
 
-    if (res != CURLE_OK) {
-      LOG_E_STREAM << "curl_easy_perform() failed: " << curl_easy_strerror (res) << std::endl;
-    } else {
-      // LOG_D_STREAM << "Downloaded content:\n" << rawRssBuffer << std::endl;
-      int oldItemCount = rssFeeds.getItemCount ();
-      rssFeeds = feedParser.parseRSSToDataStructure (rawRssBuffer);
-      if (rssFeeds.getItemCount () > oldItemCount) {
-        LOG_D_STREAM << "Fetched " << (rssFeeds.getItemCount () - oldItemCount)
-                     << " new items from the RSS feed." << std::endl;
-      } else {
-        LOG_E_STREAM << "No items found in the RSS feed." << std::endl;
-        curl_easy_cleanup (curl);
-        return 0; // No items found
-      }
-    }
-    curl_easy_cleanup (curl);
-    return rssFeeds.getItemCount ();
+  RSSFeed newFeed = parseRSS (xmlData, embedded);
+
+  // Create set of current hashes for fast lookup
+  std::unordered_set<std::string> currentHashes;
+  for (const auto& item : feed_.items) {
+    currentHashes.insert (item.hash);
   }
-  curl_easy_cleanup (curl);
-  return -1;
+
+  // Add new items to main feed, but check for duplicates
+  int addedItems = 0;
+  for (const auto& item : newFeed.items) {
+    if (currentHashes.find (item.hash) == currentHashes.end ()) {
+      feed_.addItem (item);
+      currentHashes.insert (item.hash); // Update set for next iterations
+      addedItems++;
+    }
+  }
+
+  LOG_D_STREAM << "Added " << addedItems << " new items to feed" << std::endl;
+  return addedItems;
+}
+
+int RssManager::fetchAllFeeds () {
+  checkAndReloadFiles();
+
+  int totalItems = 0;
+
+  for (const auto& rssUrl : urls_) {
+    int items = fetchFeed (rssUrl.url, rssUrl.embedded);
+    if (items > 0) {
+      totalItems += items;
+    }
+  }
+
+  LOG_I_STREAM << "Total fetched items: " << totalItems << std::endl;
+  return totalItems;
+}
+
+size_t RssManager::getItemCount (bool embedded) const {
+  size_t count = 0;
+  for (const auto& item : feed_.items) {
+    if (item.embedded == embedded) {
+      count++;
+    }
+  }
+  return count;
+}
+
+RSSItem RssManager::getRandomItem () {
+  if (feed_.items.empty ()) {
+    return RSSItem ();
+  }
+
+  std::uniform_int_distribution<size_t> dist (0, feed_.items.size () - 1);
+  size_t index = dist (rng_);
+
+  RSSItem item = feed_.items[index];
+
+  // Save hash immediately to prevent re-processing
+  saveSeenHash (item.hash);
+
+  // Remove item from feed
+  feed_.items.erase (feed_.items.begin () + index);
+
+  return item;
+}
+
+RSSItem RssManager::getRandomItem (bool embedded) {
+  // Find items with matching embedded flag
+  std::vector<size_t> matchingIndices;
+  for (size_t i = 0; i < feed_.items.size (); ++i) {
+    if (feed_.items[i].embedded == embedded) {
+      matchingIndices.push_back (i);
+    }
+  }
+
+  if (matchingIndices.empty ()) {
+    return RSSItem ();
+  }
+
+  // Pick random item from matching ones
+  std::uniform_int_distribution<size_t> dist (0, matchingIndices.size () - 1);
+  size_t randomIndex = dist (rng_);
+  size_t actualIndex = matchingIndices[randomIndex];
+
+  RSSItem item = feed_.items[actualIndex];
+
+  // Save hash immediately to prevent re-processing
+  saveSeenHash (item.hash);
+
+  // Remove item from feed
+  feed_.items.erase (feed_.items.begin () + actualIndex);
+
+  return item;
+}
+
+// Add method to save all hashes at once (call this periodically or at shutdown)
+int RssManager::saveAllSeenHashes () {
+  nlohmann::json jsonData = nlohmann::json::array ();
+  for (const auto& h : seenHashes_) {
+    jsonData.push_back (h);
+  }
+
+  std::ofstream file (getHashesPath ());
+  if (!file.is_open ())
+    return -1;
+  file << jsonData.dump (4);
+  return 0;
+}
+
+bool RssManager::hasFileChanged (const std::filesystem::path& path,
+                                 std::filesystem::file_time_type& lastModified) {
+  if (!std::filesystem::exists (path)) {
+    return false;
+  }
+
+  auto currentModified = std::filesystem::last_write_time (path);
+  if (currentModified != lastModified) {
+    lastModified = currentModified;
+    return true;
+  }
+  return false;
+}
+
+void RssManager::checkAndReloadFiles () {
+  bool urlsChanged = hasFileChanged (getUrlsPath (), urlsLastModified_);
+  bool hashesChanged = hasFileChanged (getHashesPath (), hashesLastModified_);
+
+  if (urlsChanged) {
+    LOG_I_STREAM << "URLs file changed, reloading..." << std::endl;
+    loadUrls ();
+  }
+
+  if (hashesChanged) {
+    LOG_I_STREAM << "Hashes file changed, reloading..." << std::endl;
+    loadSeenHashes ();
+  }
 }
