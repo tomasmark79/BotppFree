@@ -68,14 +68,12 @@ struct RSSItem {
 };
 
 struct RSSFeed {
-  //std::string toString () const;
   std::string title;
   std::string description;
   std::string link;
   std::string pubDate;
   std::string language;
-  std::string hash; // Unique hash for the feed
-
+  std::string hash;
   std::vector<RSSItem> items;
 
   void addItem (const RSSItem& item) {
@@ -94,6 +92,15 @@ struct RSSFeed {
   }
   std::string getLink () const {
     return link;
+  }
+  std::string getPubDate () const {
+    return pubDate;
+  }
+  std::string getLanguage () const {
+    return language;
+  }
+  std::string getHash () const {
+    return hash;
   }
   const std::vector<RSSItem>& getItems () const {
     return items;
@@ -351,6 +358,8 @@ public:
     // Store the hash of the picked item in seenHashes
     FeedStorage feedStorage;
     feedStorage.addSeenHashStringToSeenHashJsonFile (randomItem.hash_);
+
+    // Check if the item is embedded
 
     return randomItem; // Return the picked item
   }

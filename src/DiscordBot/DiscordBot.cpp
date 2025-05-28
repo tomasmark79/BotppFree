@@ -11,9 +11,9 @@
 #define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.bot++.key"
 const dpp::snowflake channelRss = 1375852042790244352;
 const bool noEmbedded = false;
+RssManager rssManager;
 
 DiscordBot::DiscordBot () {
-  RssManager rssManager;
   rssManager.createFiles (); // Once per app start
   rssManager.loadUrlListFromFile ();
   rssManager.loadSeenHashesFromFile ();
@@ -24,7 +24,8 @@ DiscordBot::DiscordBot () {
 std::atomic<bool> isPollingPrintFeedRunning (false);
 std::atomic<bool> stopPollingPrintFeed (false);
 #ifdef IS_RELEASED_DISCORD_BOT
-int pollingPrintFeedIntervalInSec = 60 * 60; // 1 hour
+// int pollingPrintFeedIntervalInSec = 60 * 60; // 1 hour
+int pollingPrintFeedIntervalInSec = 20;
 #else
 int pollingPrintFeedIntervalInSec = 1; // test purpose
 #endif
@@ -33,17 +34,16 @@ bool DiscordBot::startPollingPrintFeed () {
     std::thread pollingThreadPrintFeed ([&] () -> void {
       while (!stopPollingPrintFeed.load ()) {
         try {
-          RssManager rssManager;
+          bool* isEmbed; // Default to false
           RSSItem randomItem = rssManager.getRandomItem ();
           if (!randomItem.title_.empty ()) {
             int remainingItems = rssManager.getFeedQueueSize ();
-            LOG_I_STREAM << rssManager.getItemTitle (randomItem) << " remain: " << remainingItems
+            LOG_I_STREAM << rssManager.getItemTitle (randomItem) << " - rem: " << remainingItems
                          << std::endl;
-
 // // Discord Channel Output
 #ifdef IS_RELEASED_DISCORD_BOT
             printStringToChannel (rssManager.getSimpleItemAsUrl (randomItem), channelRss, {},
-                                  noEmbedded);
+                                  randomItem.isEmbed_);
 #endif
 
           } else {
