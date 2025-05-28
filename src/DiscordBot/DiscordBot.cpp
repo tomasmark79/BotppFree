@@ -1,16 +1,24 @@
 #include "DiscordBot.hpp"
+#include <Assets/AssetContext.hpp>
 #include <Logger/Logger.hpp>
 #include <IBot/version.h>
 #include <RssManager/RssManager.hpp>
-
 #include <thread>
 #include <atomic>
 
-#define IS_RELEASED_DISCORD_BOT
+// #define IS_RELEASED_DISCORD_BOT
 
 #define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.bot++.key"
 const dpp::snowflake channelRss = 1375852042790244352;
 const bool noEmbedded = false;
+
+DiscordBot::DiscordBot () {
+  RssManager rssManager;
+  rssManager.createFiles (); // Once per app start
+  rssManager.loadUrlListFromFile ();
+  rssManager.loadSeenHashesFromFile ();
+  rssManager.loadVolatileHashes ();
+}
 
 // Polling print feed every 47 minutes
 std::atomic<bool> isPollingPrintFeedRunning (false);
@@ -18,7 +26,7 @@ std::atomic<bool> stopPollingPrintFeed (false);
 #ifdef IS_RELEASED_DISCORD_BOT
 int pollingPrintFeedIntervalInSec = 60 * 60; // 1 hour
 #else
-int pollingPrintFeedIntervalInSec = 3; // test purpose
+int pollingPrintFeedIntervalInSec = 1; // test purpose
 #endif
 bool DiscordBot::startPollingPrintFeed () {
   {
@@ -72,23 +80,9 @@ bool DiscordBot::startPollingFetchFeed () {
       while (!stopPollingFetchFeed.load ()) {
         try {
           RssManager rssManager;
-          int result;
-          result = rssManager.fetchFeed ("https://www.root.cz/rss/clanky/");
-          result = rssManager.fetchFeed ("https://www.root.cz/rss/zpravicky/");
-          result = rssManager.fetchFeed ("https://www.root.cz/rss/knihy/");
-          result = rssManager.fetchFeed ("https://blog.root.cz/rss/");
-          result = rssManager.fetchFeed ("https://www.root.cz/rss/skoleni");
-          result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/abc.rss");
-          //result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/diskuse.rss");
-          result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/hardware.rss");
-          result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/software.rss");
-          result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/zpravicky.rss");
-          //result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/slovnik.rss");
-          //result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/kdojekdo.rss");
-          //result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/blog.rss");
-          result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/ovladace.rss");
-          //result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/blogDigest.rss");
-          //result = rssManager.fetchFeed ("https://www.abclinuxu.cz/auto/faq.rss");
+          rssManager.loadUrlListFromFile ();
+          rssManager.loadSeenHashesFromFile ();
+          rssManager.fetchFeeds ();
 
           LOG_I_STREAM << "Thread pollingThreadFetchFeed: Fetched " << rssManager.getItemCount ()
                        << " items from the feeds." << std::endl;
@@ -121,7 +115,8 @@ int DiscordBot::initCluster () {
     DiscordBot::bot_
         = std::make_unique<dpp::cluster> (token, dpp::i_default_intents | dpp::i_message_content);
 
-    bot_->log (dpp::ll_debug, "Bot++");
+    // bot_->log (dpp::ll_debug, "Bot++");
+    bot_->log (dpp::ll_info, "Bot++");
 
     bot_->on_log ([&] (const dpp::log_t& log) {
       LOG_D_STREAM << "[" << dpp::utility::current_date_time () << "] "
@@ -252,10 +247,10 @@ void DiscordBot::loadOnSlashCommands () {
                              "https://digitalspace.name/avatar/avatarpix.png")
                 .set_description (this->getLinuxFastfetchCpp ().substr (0, 8192 - 2) + "\n")
                 .set_thumbnail ("https://digitalspace.name/avatar/Linux-Logo-1996-present.png")
-                .add_field (
-                    "Další informace",
-                    "Operační systém Linux používá Linux kernel, který vychází z myšlenek Unixu "
-                    "a respektuje příslušné standardy POSIX a Single UNIX Specification.")
+                .add_field ("Další informace",
+                            "Operační systém Linux používá Linux kernel, který vychází z myšlenek "
+                            "Unixu "
+                            "a respektuje příslušné standardy POSIX a Single UNIX Specification.")
                 //.add_field ("🩵🩵", "🩵🩵", true)
                 //.add_field ("🩵🩵", "🩵🩵", true)
                 .set_image ("https://digitalspace.name/avatar/Linux-Logo-1996-present.png")

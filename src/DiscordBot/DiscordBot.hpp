@@ -12,11 +12,13 @@
 // config_diagnostics = 1 to config_diagnostics = 0
 
 class DiscordBot {
-public:
-  DiscordBot () = default;
-  ~DiscordBot () = default;
+  std::filesystem::path rssUrls_;
+  std::filesystem::path seenHashes_;
 
 public:
+  DiscordBot ();
+  ~DiscordBot () = default;
+
   /**
    * @brief Initialize the Discord bot cluster.
    * @return 0 on success, -1 on failure.
@@ -48,15 +50,11 @@ private:
   bool startPollingFetchFeed ();
 
   int printStringToChannel (const std::string& str, dpp::snowflake channelId,
-                               const dpp::slashcommand_t& event, bool allowEmbedded);
+                            const dpp::slashcommand_t& event, bool allowEmbedded);
 
-                               
   void loadOnSlashCommands ();
   void loadOnReadyCommands ();
 
-  
-  
-  
   void printFullFeedToChannel (const std::string& url, dpp::snowflake channelId,
                                const dpp::slashcommand_t& event, bool allowEmbedded);
   void printRandomFeedToChannel (const std::string& url, dpp::snowflake channelId,

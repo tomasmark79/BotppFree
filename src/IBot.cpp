@@ -4,8 +4,6 @@
 #include <IBot/IBot.hpp>
 #include <Assets/AssetContext.hpp>
 #include <Logger/Logger.hpp>
-#include <RssManager/RssManager.hpp>
-
 #include <DiscordBot/DiscordBot.hpp>
 #include <Utils/Utils.hpp>
 
