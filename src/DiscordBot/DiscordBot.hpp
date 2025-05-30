@@ -49,6 +49,8 @@ private:
   bool startPollingPrintFeed ();
   bool startPollingFetchFeed ();
 
+  int printStringToChannelAsThread (const std::string& message, dpp::snowflake channelId,
+                                    const std::string& threadName = "", bool allowEmbedded = true);
   int printStringToChannel (const std::string& str, dpp::snowflake channelId,
                             const dpp::slashcommand_t& event, bool allowEmbedded);
 

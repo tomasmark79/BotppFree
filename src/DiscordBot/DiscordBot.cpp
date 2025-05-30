@@ -46,6 +46,8 @@ bool DiscordBot::startPollingPrintFeed () {
 // // Discord Channel Output
 #ifdef IS_RELEASED_DISCORD_BOT
             printStringToChannel (item.toMarkdownLink (), channelRss, {}, item.embedded);
+            // printStringToChannelAsThread (item.toMarkdownLink (), channelRss, item.title,
+            //                               item.embedded);
 #endif
 
           } else {
@@ -452,6 +454,86 @@ void DiscordBot::sendRssFeedViaReply (const std::string& url, const dpp::slashco
   //   }
   //   event.reply (msg);
   // }
+}
+
+// ...existing code...
+
+/// @brief Print a string message to a specified Discord channel as a new thread.
+/// This function sends a message to a Discord channel and creates a new thread for it.
+/// It checks the message length and channel ID before sending.
+/// @param message The message content
+/// @param channelId The target channel ID
+/// @param threadName The name for the new thread (optional, defaults to first 100 chars of message)
+/// @param allowEmbedded Whether to allow Discord embeds
+/// @return Returns 0 on success, -1 if the message is empty, -2 if the message exceeds the maximum length,
+///         -3 if the channel ID is 0, -4 if thread creation fails
+int DiscordBot::printStringToChannelAsThread (const std::string& message, dpp::snowflake channelId,
+                                              const std::string& threadName, bool allowEmbedded) {
+  if (message.empty ()) {
+    LOG_W_STREAM << "Message is empty, nothing to send." << std::endl;
+    return -1;
+  }
+
+  if (message.size () > DISCORD_MAX_MSG_LEN) {
+    LOG_E_STREAM << "Message exceeds maximum length of " << DISCORD_MAX_MSG_LEN
+                 << " characters. Message will not be sent." << std::endl;
+    return -2;
+  }
+
+  if (channelId == 0) {
+    LOG_W_STREAM << "Channel ID is 0, message will not be sent." << std::endl;
+    return -3;
+  }
+
+  // Generate thread name if not provided
+  std::string finalThreadName = threadName;
+  if (finalThreadName.empty ()) {
+    finalThreadName = message.substr (0, 100); // Discord thread name limit is 100 chars
+    if (message.size () > 100) {
+      finalThreadName += "...";
+    }
+  }
+
+#ifdef TESTING_DISCORD_BOT
+  dpp::message msg (channelId, message + " test action");
+#else
+  dpp::message msg (channelId, message);
+#endif
+
+  if (!allowEmbedded) {
+    msg.set_flags (dpp::m_suppress_embeds);
+  }
+
+  // First create the message
+  bot_->message_create (msg, [this, finalThreadName, channelId,
+                              message] (const dpp::confirmation_callback_t& callback) {
+    if (callback.is_error ()) {
+      LOG_E_STREAM << "Failed to create message: " << callback.get_error ().message << std::endl;
+      return;
+    }
+
+    const auto& createdMessage = callback.get<dpp::message> ();
+    LOG_I_STREAM << "Message created successfully with ID: " << createdMessage.id << std::endl;
+
+    // Then create a thread from that message
+    bot_->thread_create_with_message (
+        finalThreadName, channelId, createdMessage.id, 60, // auto_archive_duration in minutes
+        0, // rate_limit_per_user (0 = no rate limit)
+        [this, channelId, message] (const dpp::confirmation_callback_t& thread_callback) {
+          if (thread_callback.is_error ()) {
+            LOG_E_STREAM << "Failed to create thread: " << thread_callback.get_error ().message
+                         << std::endl;
+            return;
+          }
+
+          const auto& createdThread = thread_callback.get<dpp::thread> ();
+          LOG_I_STREAM << "Thread created successfully with ID: " << createdThread.id << std::endl;
+          LOG_I_STREAM << "Message sent to channel " << channelId << " as thread: " << message
+                       << std::endl;
+        });
+  });
+
+  return 0;
 }
 
 /// @brief Send RSS feed via direct message to channel
