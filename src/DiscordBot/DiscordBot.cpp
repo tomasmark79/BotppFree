@@ -32,10 +32,9 @@ bool DiscordBot::startPollingPrintFeed () {
     std::thread pollingThreadPrintFeed ([&] () -> void {
       while (!stopPollingPrintFeed.load ()) {
         try {
-         
 
           RSSItem item = rss.getRandomItem ();
-         
+
           if (!item.title.empty ()) {
             LOG_D_STREAM << "Random item: " << item.title << " emb: " << item.embedded << std::endl;
 
@@ -384,13 +383,24 @@ int DiscordBot::printStringToChannel (const std::string& message, dpp::snowflake
   }
 
   dpp::message msg (channelId, message);
+
   if (!allowEmbedded) {
     msg.set_flags (dpp::m_suppress_embeds); // Suppress embeds if allowEmbedded is false
   }
   if (event.command.id != 0) {
     event.reply (msg);
   } else {
-    bot_->message_create (msg);
+    // Nejdřív vytvořte zprávu
+    bot_->message_create (msg, [this] (const dpp::confirmation_callback_t& callback) {
+      if (callback.is_error ()) {
+        LOG_E_STREAM << "Failed to create message: " << callback.get_error ().message << std::endl;
+        return;
+      }
+
+      // Pak ji crosspostněte (pouze pokud je kanál announcement kanál)
+      const auto& message = callback.get<dpp::message> ();
+      bot_->message_crosspost (message.id, message.channel_id);
+    });
   }
   LOG_I_STREAM << "Message sent to channel " << channelId << ": " << message << std::endl;
 
