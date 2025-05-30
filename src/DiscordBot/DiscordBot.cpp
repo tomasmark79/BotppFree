@@ -10,6 +10,7 @@
 constexpr size_t DISCORD_MAX_MSG_LEN = 2000;
 
 #define IS_RELEASED_DISCORD_BOT
+// #define TESTING_DISCORD_BOT
 
 #define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.bot++.key"
 const dpp::snowflake channelRss = 1375852042790244352;
@@ -23,7 +24,11 @@ DiscordBot::DiscordBot () {
 std::atomic<bool> isPollingPrintFeedRunning (false);
 std::atomic<bool> stopPollingPrintFeed (false);
 #ifdef IS_RELEASED_DISCORD_BOT
+  #ifdef TESTING_DISCORD_BOT
+int pollingPrintFeedIntervalInSec = 10; // 10 seconds
+  #else
 int pollingPrintFeedIntervalInSec = 60 * 23; // 23 minutes
+  #endif
 #else
 int pollingPrintFeedIntervalInSec = 1; // test purpose
 #endif
@@ -382,24 +387,45 @@ int DiscordBot::printStringToChannel (const std::string& message, dpp::snowflake
     return -3;
   }
 
+#ifdef TESTING_DISCORD_BOT
+  dpp::message msg (channelId, message + " test action");
+#else
   dpp::message msg (channelId, message);
+#endif
 
   if (!allowEmbedded) {
     msg.set_flags (dpp::m_suppress_embeds); // Suppress embeds if allowEmbedded is false
   }
   if (event.command.id != 0) {
+
+    // If event is a slash command, reply to it
     event.reply (msg);
   } else {
+
+    // If no event, send as a direct message to the channel
+    // bot_->message_create (msg);
     // Nejdřív vytvořte zprávu
-    bot_->message_create (msg, [this] (const dpp::confirmation_callback_t& callback) {
+    bot_->message_create (msg, [this, message,
+                                channelId] (const dpp::confirmation_callback_t& callback) {
       if (callback.is_error ()) {
         LOG_E_STREAM << "Failed to create message: " << callback.get_error ().message << std::endl;
         return;
       }
 
+      const auto& createdMessage = callback.get<dpp::message> ();
+      LOG_I_STREAM << "Message created successfully with ID: " << createdMessage.id << std::endl;
+      LOG_I_STREAM << "Message sent to channel " << channelId << ": " << message << std::endl;
+
       // Pak ji crosspostněte (pouze pokud je kanál announcement kanál)
-      const auto& message = callback.get<dpp::message> ();
-      bot_->message_crosspost (message.id, message.channel_id);
+      bot_->message_crosspost (createdMessage.id, createdMessage.channel_id,
+                               [this] (const dpp::confirmation_callback_t& callback) {
+                                 if (callback.is_error ()) {
+                                   LOG_E_STREAM << "Failed to crosspost message: "
+                                                << callback.get_error ().message << std::endl;
+                                 } else {
+                                   LOG_I_STREAM << "Message crossposted successfully" << std::endl;
+                                 }
+                               });
     });
   }
   LOG_I_STREAM << "Message sent to channel " << channelId << ": " << message << std::endl;
