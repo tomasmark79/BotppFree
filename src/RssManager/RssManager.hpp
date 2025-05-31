@@ -88,7 +88,8 @@ public:
   std::string getItemAsMarkdown (const RSSItem& item) const {
     return item.toMarkdownLink ();
   }
-
+  std::string getSourcesAsList ();
+  int addUrl (const std::string& url, bool embedded);
 private:
   RSSFeed feed_;
   std::vector<RSSUrl> urls_;
@@ -96,6 +97,7 @@ private:
   std::mt19937 rng_;
 
   // File operations
+  int saveUrls ();
   int loadUrls ();
   int loadSeenHashes ();
   int saveSeenHash (const std::string& hash);
