@@ -28,8 +28,11 @@ option(ENABLE_HARDENING "Enable security hardening options" OFF)
 include(cmake/tmplt-ipo.cmake)
 option(ENABLE_IPO "Enable Interprocedural Optimization" OFF)
 # === ccache
-include(cmake/ccache.cmake)
 option(ENABLE_CCACHE "Enable ccache" ON)
+if(ENABLE_CCACHE)
+    set(CMAKE_C_COMPILER_LAUNCHER ccache)
+    set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
+endif()
 
 # Linting C/C++ code
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -79,7 +82,6 @@ find_package(OpenSSL REQUIRED)
 # ==============================================================================
 # export CPM_SOURCE_CACHE=$HOME/.cache/CPM # for localy caching CPM packages
 # ==============================================================================
-include(cmake/ccache.cmake)
 include(cmake/CPM.cmake)
 CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.12.0")
 CPMAddPackage("gh:cpm-cmake/CPMLicenses.cmake@0.0.7")
@@ -87,12 +89,7 @@ cpm_licenses_create_disclaimer_target(
     write-licenses-${LIBRARY_NAME} "${CMAKE_CURRENT_BINARY_DIR}/${LIBRARY_NAME}_third_party.txt"
     "${CPM_PACKAGES}")
 
-# Nastavit ccache před přidáním DPP
-if(ENABLE_CCACHE)
-    set(CMAKE_C_COMPILER_LAUNCHER ccache)
-    set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
-endif()
-
+# # Nastavit ccache před přidáním DPP
 # brainboxdotcc/DPP https://github.com/brainboxdotcc/DPP/blob/master/CMakeLists.txt important
 # "CONAN_EXPORTED ON" has to be used together with Conan
 CPMAddPackage(
@@ -137,7 +134,6 @@ add_library(${LIBRARY_NAME})
 target_sources(${LIBRARY_NAME} PRIVATE ${headers} ${sources})
 
 apply_ipo(${LIBRARY_NAME})
-apply_ccache(${LIBRARY_NAME})
 apply_hardening(${LIBRARY_NAME})
 apply_sanitizers(${LIBRARY_NAME})
 
