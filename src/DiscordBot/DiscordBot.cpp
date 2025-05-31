@@ -37,21 +37,14 @@ bool DiscordBot::startPollingPrintFeed () {
     std::thread pollingThreadPrintFeed ([&] () -> void {
       while (!stopPollingPrintFeed.load ()) {
         try {
-
           RSSItem item = rss.getRandomItem ();
-
           if (!item.title.empty ()) {
             LOG_D_STREAM << "Random item: " << item.title << " emb: " << item.embedded << std::endl;
-
-// // Discord Channel Output
 #ifdef IS_RELEASED_DISCORD_BOT
             printStringToChannel (item.toMarkdownLink (), channelRss, {}, item.embedded);
-            // printStringToChannelAsThread (item.toMarkdownLink (), channelRss, item.title,
-            //                               false);
+            // printStringToChannelAsThread (item.toMarkdownLink (), channelRss, item.title, false);
 #endif
-
           } else {
-            // printStringToChannel ("No items found in the feed queue.", channelRss, {}, noEmbedded);
             LOG_W_STREAM << "No items found in the feed queue." << std::endl;
           }
           isPollingPrintFeedRunning.store (true);
@@ -148,6 +141,23 @@ void DiscordBot::loadOnSlashCommands () {
         // bot_->message_create (msg);
       }
       return;
+    }
+
+    // getfeednow
+    if (event.command.get_command_name () == "getfeednow") {
+      try {
+        RSSItem item = rss.getRandomItem ();
+        if (!item.title.empty ()) {
+          LOG_D_STREAM << "getfeednow Random item: " << item.title << " emb: " << item.embedded << std::endl;
+#ifdef IS_RELEASED_DISCORD_BOT
+          printStringToChannel (item.toMarkdownLink (), channelRss, event, item.embedded);
+#endif
+        } else {
+          LOG_W_STREAM << "No items found in the feed queue." << std::endl;
+        }
+      } catch (const std::runtime_error& e) {
+        LOG_E_STREAM << "Error: " << e.what () << std::endl;
+      }
     }
 
     // addsource
@@ -337,10 +347,12 @@ int DiscordBot::printStringToChannel (const std::string& message, dpp::snowflake
   if (!allowEmbedded) {
     msg.set_flags (dpp::m_suppress_embeds); // Suppress embeds if allowEmbedded is false
   }
+  
   if (event.command.id != 0) {
-
     // If event is a slash command, reply to it
     event.reply (msg);
+    LOG_I_STREAM << "Message replied to slash command in channel "
+                 << event.command.channel_id << ": " << message << std::endl;
   } else {
 
     // If no event, send as a direct message to the channel
@@ -369,8 +381,6 @@ int DiscordBot::printStringToChannel (const std::string& message, dpp::snowflake
                                });
     });
   }
-  LOG_I_STREAM << "Message sent to channel " << channelId << ": " << message << std::endl;
-
   return 0;
 }
 
