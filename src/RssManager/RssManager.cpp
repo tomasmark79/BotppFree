@@ -22,6 +22,7 @@ int RssManager::initialize () {
           { { "url", "https://www.root.cz/rss/zpravicky/" }, { "embedded", true } },
           { { "url", "https://www.root.cz/rss/skoleni" }, { "embedded", true } },
           { { "url", "https://www.abclinuxu.cz/auto/zpravicky.rss" }, { "embedded", false } },
+          { { "url", "https://9to5linux.com/feed/atom" }, { "embedded", true } },
           { { "url", "https://www.abclinuxu.cz/auto/abc.rss" }, { "embedded", false } } });
 
     std::ofstream file (getUrlsPath ());
@@ -137,6 +138,7 @@ RSSFeed RssManager::parseRSS (const std::string& xmlData, bool embedded) {
 
   tinyxml2::XMLElement* channel = nullptr;
   tinyxml2::XMLElement* firstItem = nullptr;
+  bool isAtom = false;
 
   // Try RSS 2.0 format
   if (auto rssElement = doc.FirstChildElement ("rss")) {
@@ -150,40 +152,85 @@ RSSFeed RssManager::parseRSS (const std::string& xmlData, bool embedded) {
     channel = rdfElement->FirstChildElement ("channel");
     firstItem = rdfElement->FirstChildElement ("item");
   }
+  // Try Atom format
+  else if (auto feedElement = doc.FirstChildElement ("feed")) {
+    channel = feedElement;
+    firstItem = feedElement->FirstChildElement ("entry");
+    isAtom = true;
+  }
 
   if (!channel) {
-    LOG_E_STREAM << "No valid RSS channel found." << std::endl;
+    LOG_E_STREAM << "No valid RSS/Atom channel found." << std::endl;
     return feed;
   }
 
   // Parse channel info
-  if (auto titleEl = channel->FirstChildElement ("title")) {
-    feed.title = titleEl->GetText () ? titleEl->GetText () : "";
-  }
-  if (auto descEl = channel->FirstChildElement ("description")) {
-    feed.description = descEl->GetText () ? descEl->GetText () : "";
-  }
-  if (auto linkEl = channel->FirstChildElement ("link")) {
-    feed.link = linkEl->GetText () ? linkEl->GetText () : "";
+  if (isAtom) {
+    // Atom feed info
+    if (auto titleEl = channel->FirstChildElement ("title")) {
+      feed.title = titleEl->GetText () ? titleEl->GetText () : "";
+    }
+    if (auto subtitleEl = channel->FirstChildElement ("subtitle")) {
+      feed.description = subtitleEl->GetText () ? subtitleEl->GetText () : "";
+    }
+    if (auto linkEl = channel->FirstChildElement ("link")) {
+      const char* href = linkEl->Attribute ("href");
+      feed.link = href ? href : "";
+    }
+  } else {
+    // RSS feed info
+    if (auto titleEl = channel->FirstChildElement ("title")) {
+      feed.title = titleEl->GetText () ? titleEl->GetText () : "";
+    }
+    if (auto descEl = channel->FirstChildElement ("description")) {
+      feed.description = descEl->GetText () ? descEl->GetText () : "";
+    }
+    if (auto linkEl = channel->FirstChildElement ("link")) {
+      feed.link = linkEl->GetText () ? linkEl->GetText () : "";
+    }
   }
 
   // Parse items
   int newItems = 0;
-  for (auto item = firstItem; item; item = item->NextSiblingElement ("item")) {
-    RSSItem rssItem;
-    rssItem.embedded = embedded; // Set embedded flag from URL config
+  const char* itemTag = isAtom ? "entry" : "item";
 
-    if (auto titleEl = item->FirstChildElement ("title")) {
-      rssItem.title = titleEl->GetText () ? titleEl->GetText () : "";
-    }
-    if (auto linkEl = item->FirstChildElement ("link")) {
-      rssItem.link = linkEl->GetText () ? linkEl->GetText () : "";
-    }
-    if (auto descEl = item->FirstChildElement ("description")) {
-      rssItem.description = descEl->GetText () ? descEl->GetText () : "";
-    }
-    if (auto dateEl = item->FirstChildElement ("pubDate")) {
-      rssItem.pubDate = dateEl->GetText () ? dateEl->GetText () : "";
+  for (auto item = firstItem; item; item = item->NextSiblingElement (itemTag)) {
+    RSSItem rssItem;
+    rssItem.embedded = embedded;
+
+    if (isAtom) {
+      // Parse Atom entry
+      if (auto titleEl = item->FirstChildElement ("title")) {
+        rssItem.title = titleEl->GetText () ? titleEl->GetText () : "";
+      }
+      if (auto linkEl = item->FirstChildElement ("link")) {
+        const char* href = linkEl->Attribute ("href");
+        rssItem.link = href ? href : "";
+      }
+      if (auto summaryEl = item->FirstChildElement ("summary")) {
+        rssItem.description = summaryEl->GetText () ? summaryEl->GetText () : "";
+      } else if (auto contentEl = item->FirstChildElement ("content")) {
+        rssItem.description = contentEl->GetText () ? contentEl->GetText () : "";
+      }
+      if (auto updatedEl = item->FirstChildElement ("updated")) {
+        rssItem.pubDate = updatedEl->GetText () ? updatedEl->GetText () : "";
+      } else if (auto publishedEl = item->FirstChildElement ("published")) {
+        rssItem.pubDate = publishedEl->GetText () ? publishedEl->GetText () : "";
+      }
+    } else {
+      // Parse RSS item (existing code)
+      if (auto titleEl = item->FirstChildElement ("title")) {
+        rssItem.title = titleEl->GetText () ? titleEl->GetText () : "";
+      }
+      if (auto linkEl = item->FirstChildElement ("link")) {
+        rssItem.link = linkEl->GetText () ? linkEl->GetText () : "";
+      }
+      if (auto descEl = item->FirstChildElement ("description")) {
+        rssItem.description = descEl->GetText () ? descEl->GetText () : "";
+      }
+      if (auto dateEl = item->FirstChildElement ("pubDate")) {
+        rssItem.pubDate = dateEl->GetText () ? dateEl->GetText () : "";
+      }
     }
 
     if (rssItem.title.empty () || rssItem.link.empty ())
@@ -200,9 +247,8 @@ RSSFeed RssManager::parseRSS (const std::string& xmlData, bool embedded) {
     newItems++;
   }
 
-  LOG_I_STREAM << "Parsed " << newItems
-               << " new items from RSS feed (embedded: " << (embedded ? "true" : "false") << ")."
-               << std::endl;
+  LOG_I_STREAM << "Parsed " << newItems << " new items from " << (isAtom ? "Atom" : "RSS")
+               << " feed (embedded: " << (embedded ? "true" : "false") << ")." << std::endl;
   return feed;
 }
 

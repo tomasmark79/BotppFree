@@ -47,7 +47,7 @@ bool DiscordBot::startPollingPrintFeed () {
 #ifdef IS_RELEASED_DISCORD_BOT
             printStringToChannel (item.toMarkdownLink (), channelRss, {}, item.embedded);
             // printStringToChannelAsThread (item.toMarkdownLink (), channelRss, item.title,
-            //                               item.embedded);
+            //                               false);
 #endif
 
           } else {

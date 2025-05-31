@@ -1,0 +1,30 @@
+[
+    {
+        "embedded": true,
+        "url": "https://www.root.cz/rss/clanky/"
+    },
+    {
+        "embedded": true,
+        "url": "https://www.lupa.cz/rss/clanky/"
+    },
+    {
+        "embedded": true,
+        "url": "https://www.root.cz/rss/zpravicky/"
+    },
+    {
+        "embedded": false,
+        "url": "https://www.abclinuxu.cz/auto/zpravicky.rss"
+    },
+    {
+        "embedded": false,
+        "url": "https://www.abclinuxu.cz/auto/abc.rss"
+    },
+    {
+        "embedded": true,
+        "url": "https://9to5linux.com/feed/atom"
+    },
+    {
+        "embedded": true,
+        "url": "https://www.linuxtoday.com/backend/biglt.rss"
+    }
+]
