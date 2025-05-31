@@ -54,6 +54,8 @@ private:
   int printStringToChannel (const std::string& str, dpp::snowflake channelId,
                             const dpp::slashcommand_t& event, bool allowEmbedded);
 
+  void addSource (const std::string& url, bool embedded);
+
   void loadOnSlashCommands ();
   void loadOnReadyCommands ();
 

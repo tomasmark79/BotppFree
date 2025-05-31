@@ -137,87 +137,52 @@ int DiscordBot::initCluster () {
 void DiscordBot::loadOnSlashCommands () {
 
   bot_->on_slashcommand ([&, this] (const dpp::slashcommand_t& event) {
-    bool noEmbedded = false;
-    // root.cz
-    if (event.command.get_command_name () == "rootclanky") {
-      printFullFeedToChannel ("https://www.root.cz/rss/clanky/", channelRss, event, noEmbedded);
-    }
-    if (event.command.get_command_name () == "rootclanek") {
-      printRandomFeedToChannel ("https://www.root.cz/rss/clanky/", channelRss, event, noEmbedded);
-    }
-    if (event.command.get_command_name () == "rootzpravicky") {
-      printFullFeedToChannel ("https://www.root.cz/rss/zpravicky/", channelRss, event, noEmbedded);
-    }
-    if (event.command.get_command_name () == "rootzpravicka") {
-      printRandomFeedToChannel ("https://www.root.cz/rss/zpravicky/", channelRss, event,
-                                noEmbedded);
-    }
-    if (event.command.get_command_name () == "rootknihy") {
-      printFullFeedToChannel ("https://www.root.cz/rss/knihy/", channelRss, event, noEmbedded);
-    }
-    if (event.command.get_command_name () == "rootkniha") {
-      printRandomFeedToChannel ("https://www.root.cz/rss/knihy/", channelRss, event, noEmbedded);
-    }
-    if (event.command.get_command_name () == "rootblogy") {
-      printFullFeedToChannel ("https://blog.root.cz/rss/", channelRss, event, noEmbedded);
-    }
-    if (event.command.get_command_name () == "rootblog") {
-      printRandomFeedToChannel ("https://blog.root.cz/rss/", channelRss, event, noEmbedded);
-    }
-    if (event.command.get_command_name () == "rootskoleni") {
-      printFullFeedToChannel ("https://www.root.cz/rss/skoleni", channelRss, event, noEmbedded);
+
+    // listsources
+    if (event.command.get_command_name () == "listsources") {
+      std::string sources = rss.getSourcesAsList ();
+      if (sources.empty ()) {
+        event.reply ("No RSS sources found.");
+      } else {
+        dpp::message msg (event.command.channel_id, sources);
+        event.reply (msg);
+        // bot_->message_create (msg);
+      }
+      return;
     }
 
-    // abclinuxu.cz
-    if (event.command.get_command_name () == "abcclanky") {
-      printFullFeedToChannel ("https://www.abclinuxu.cz/auto/abc.rss", channelRss, event,
-                              noEmbedded);
-    }
-    if (event.command.get_command_name () == "abcotazky") {
-      printFullFeedToChannel ("https://www.abclinuxu.cz/auto/diskuse.rss", channelRss, event,
-                              noEmbedded);
-    }
-    if (event.command.get_command_name () == "abchw") {
-      printFullFeedToChannel ("https://www.abclinuxu.cz/auto/hardware.rss", channelRss, event,
-                              noEmbedded);
-    }
-    if (event.command.get_command_name () == "abcsw") {
-      printFullFeedToChannel ("https://www.abclinuxu.cz/auto/software.rss", channelRss, event,
-                              noEmbedded);
-    }
-    if (event.command.get_command_name () == "abczpravicky") {
-      printFullFeedToChannel ("https://www.abclinuxu.cz/auto/zpravicky.rss", channelRss, event,
-                              noEmbedded);
-    }
-    if (event.command.get_command_name () == "abcpojmy") {
-      printFullFeedToChannel ("https://www.abclinuxu.cz/auto/slovnik.rss", channelRss, event,
-                              noEmbedded);
-    }
-    if (event.command.get_command_name () == "abcosobnosti") {
-      printFullFeedToChannel ("https://www.abclinuxu.cz/auto/kdojekdo.rss", channelRss, event,
-                              noEmbedded);
-    }
-    if (event.command.get_command_name () == "abczapisky") {
-      printFullFeedToChannel ("https://www.abclinuxu.cz/auto/blog.rss", channelRss, event,
-                              noEmbedded);
-    }
-    if (event.command.get_command_name () == "abclzapisky") {
-      printFullFeedToChannel ("https://www.abclinuxu.cz/auto/blogDigest.rss", channelRss, event,
-                              noEmbedded);
-    }
-    if (event.command.get_command_name () == "abcfaq") {
-      printFullFeedToChannel ("https://www.abclinuxu.cz/auto/faq.rss", channelRss, event, false);
-    }
-    if (event.command.get_command_name () == "abcovladace") {
-      printFullFeedToChannel ("https://www.abclinuxu.cz/auto/ovladace.rss", channelRss, event,
-                              noEmbedded);
-    }
+    // addsource
+    if (event.command.get_command_name () == "addsource") {
+      std::string url = std::get<std::string> (event.get_parameter ("url"));
 
-    // rss
-    if (event.command.get_command_name () == "rss") {
-      event.reply ("Bot++ podporuje RSS 1.0 (RDF) format a RSS 2.0 format.\n"
-                   "Pro více informací navštivte: https://www.w3.org/2001/sw/Activity.html#RDF\n"
-                   "Pro více informací navštivte: https://www.rssboard.org/rss-specification");
+      bool embedded = false;
+      auto embedded_param = event.get_parameter ("embedded");
+      if (embedded_param.index () != 0) { // Check if parameter exists (not std::monostate)
+        embedded = std::get<bool> (embedded_param);
+      }
+
+      if (url.empty ()) {
+        event.reply ("Error: URL parameter is required.");
+        return;
+      }
+
+      try {
+        int result = rss.addUrl (url, embedded);
+        if (result == -1) {
+          LOG_W_STREAM << "URL already exists: " << url << std::endl;
+          event.reply ("Warning: URL already exists.");
+          return;
+        }
+        event.reply ("Source added successfully: " + url);
+      } catch (const std::runtime_error& e) {
+        LOG_E_STREAM << "Error adding source: " << e.what () << std::endl;
+        event.reply ("Error adding source: " + std::string (e.what ()));
+        return;
+      }
+
+      rss.fetchAllFeeds ();
+
+      return;
     }
 
     // ping pong
@@ -273,49 +238,23 @@ void DiscordBot::loadOnReadyCommands () {
   bot_->on_ready ([&] (const dpp::ready_t& event) {
     // clang-format off
 
-    // random
-    // bot_->global_command_create (dpp::slashcommand ("randomroot", "Get news!", bot_->me.id));
-    // bot_->global_command_create (dpp::slashcommand ("randomabc", "Get news!", bot_->me.id));
+    // 
 
-    // root.cz
-    bot_->global_command_create (dpp::slashcommand ("rootclanky", "Aktuální články na Rootu!", bot_->me.id));
-    bot_->global_command_create (dpp::slashcommand ("rootclanek", "Náhodný článek na Rootu!", bot_->me.id));
-    
-    bot_->global_command_create (dpp::slashcommand ("rootzpravicky", "Aktuální zprávičky na Rootu!", bot_->me.id));
-    bot_->global_command_create (dpp::slashcommand ("rootzpravicka", "Náhodná zprávička na Rootu!", bot_->me.id));
-    
-    bot_->global_command_create (dpp::slashcommand ("rootknihy", "Knihovna na knihy.root.cz!", bot_->me.id));
-    bot_->global_command_create (dpp::slashcommand ("rootkniha", "Náhodná kniha na knihy.root.cz!", bot_->me.id));
-    
-    bot_->global_command_create (dpp::slashcommand ("rootblogy", "Aktuální blogy na Rootu!", bot_->me.id));
-    bot_->global_command_create (dpp::slashcommand ("rootblog", "Náhodný blog na Rootu!", bot_->me.id));
+    // list sources - list all RSS sources
+    bot_->global_command_create (dpp::slashcommand ("listsources", "List all RSS sources",
+                                                   bot_->me.id));
 
-    bot_->global_command_create (dpp::slashcommand ("rootskoleni", "Připravovaná školení!", bot_->me.id));
-    
-    // abclinuxu.cz
-    bot_->global_command_create (dpp::slashcommand ("abcclanky", "Články!", bot_->me.id));
-    bot_->global_command_create (dpp::slashcommand ("abcotazky", "Otázky v poradně!", bot_->me.id));
-    bot_->global_command_create (dpp::slashcommand ("abchw", "Hardwarové záznamy!", bot_->me.id));
-    bot_->global_command_create (dpp::slashcommand ("abcsw", "Softwarové záznamy!", bot_->me.id));
-    bot_->global_command_create (dpp::slashcommand ("abczpravicky", "Zprávičky!", bot_->me.id));
-    bot_->global_command_create (dpp::slashcommand ("abcpojmy", "Slovníkové pojmy!", bot_->me.id));
-    bot_->global_command_create (dpp::slashcommand ("abcosobnosti", "Osobnosti (Kdo je)!", bot_->me.id));
-    bot_->global_command_create (dpp::slashcommand ("abczapisky", "Blogové zápisky!", bot_->me.id));
-    bot_->global_command_create (dpp::slashcommand ("abclzapisky", "Linuxové blogové zápisky!", bot_->me.id));
-    bot_->global_command_create (dpp::slashcommand ("abcfaq", "Často kladené dotazy!", bot_->me.id));
-    bot_->global_command_create (dpp::slashcommand ("abcovladace", "Ovladače!", bot_->me.id));
-
-
-    // get-pollinginterval
-    bot_->global_command_create (
-        dpp::slashcommand ("get-pollinginterval",
-                           "Get the current polling interval for RSS feeds.", bot_->me.id)
-    );
-    
-    
-    // rss
-    bot_->global_command_create (dpp::slashcommand ("rss", "About RSS Support!", bot_->me.id));
-
+    // add source - supported rss1.0 and rss2.0 and Atom feeds
+    // example of use command: /addsource url:https://www.root.cz/rss/clanky/ embedded:true
+    bot_->global_command_create (dpp::slashcommand ("addsource", "Add a new RSS source",
+                                                   bot_->me.id)
+                                     .add_option (dpp::command_option (
+                                         dpp::co_string, "url", "URL of the RSS feed", true))
+                                     .add_option (dpp::command_option (
+                                         dpp::co_boolean, "embedded",
+                                         "Whether the feed should be embedded in the message",
+                                         false)));
+                                         
     // ping pong
     bot_->global_command_create (dpp::slashcommand ("ping", "Ping pong!", bot_->me.id));
 

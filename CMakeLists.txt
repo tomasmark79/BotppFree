@@ -50,7 +50,6 @@ if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
     message(
         WARNING
             "In-source builds. Please make a new directory (called a Build directory) and run CMake from there."
-
     )
 endif()
 
@@ -87,6 +86,12 @@ CPMAddPackage("gh:cpm-cmake/CPMLicenses.cmake@0.0.7")
 cpm_licenses_create_disclaimer_target(
     write-licenses-${LIBRARY_NAME} "${CMAKE_CURRENT_BINARY_DIR}/${LIBRARY_NAME}_third_party.txt"
     "${CPM_PACKAGES}")
+
+# Nastavit ccache před přidáním DPP
+if(ENABLE_CCACHE)
+    set(CMAKE_C_COMPILER_LAUNCHER ccache)
+    set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
+endif()
 
 # brainboxdotcc/DPP https://github.com/brainboxdotcc/DPP/blob/master/CMakeLists.txt important
 # "CONAN_EXPORTED ON" has to be used together with Conan

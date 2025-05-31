@@ -14,6 +14,7 @@ RssManager::RssManager () : rng_ (std::random_device{}()) {
 }
 
 int RssManager::initialize () {
+  
   // Create default files if they don't exist
   if (!std::filesystem::exists (getUrlsPath ())) {
     nlohmann::json defaultUrls = nlohmann::json::array (
@@ -21,14 +22,15 @@ int RssManager::initialize () {
           { { "url", "https://www.lupa.cz/rss/clanky/" }, { "embedded", true } },
           { { "url", "https://www.root.cz/rss/zpravicky/" }, { "embedded", true } },
           { { "url", "https://www.root.cz/rss/skoleni" }, { "embedded", true } },
-          { { "url", "https://www.abclinuxu.cz/auto/zpravicky.rss" }, { "embedded", false } },
           { { "url", "https://9to5linux.com/feed/atom" }, { "embedded", true } },
+          { { "url", "https://www.abclinuxu.cz/auto/zpravicky.rss" }, { "embedded", false } },
           { { "url", "https://www.abclinuxu.cz/auto/abc.rss" }, { "embedded", false } } });
 
     std::ofstream file (getUrlsPath ());
     if (!file.is_open ())
       return -1;
     file << defaultUrls.dump (4);
+    LOG_I_STREAM << "Created default RSS URLs file at: " << getUrlsPath () << std::endl;
   }
 
   if (!std::filesystem::exists (getHashesPath ())) {
@@ -37,6 +39,7 @@ int RssManager::initialize () {
     if (!file.is_open ())
       return -1;
     file << defaultHashes.dump (4);
+    LOG_I_STREAM << "Created default seen hashes file at: " << getHashesPath () << std::endl;
   }
 
   // Initialize timestamps after loading
@@ -48,6 +51,40 @@ int RssManager::initialize () {
   }
 
   return loadUrls () == 0 && loadSeenHashes () == 0 ? 0 : -1;
+}
+
+int RssManager::addUrl (const std::string& url, bool embedded) {
+  // Check if URL already exists
+  for (const auto& existingUrl : urls_) {
+    if (existingUrl.url == url) {
+      LOG_W_STREAM << "URL already exists: " << url << std::endl;
+      return -1; // URL already exists
+    }
+  }
+  urls_.emplace_back (url, embedded);
+  return saveUrls ();
+}
+
+int RssManager::saveUrls () {
+  nlohmann::json jsonData = nlohmann::json::array ();
+  for (const auto& url : urls_) {
+    jsonData.push_back ({ { "url", url.url }, { "embedded", url.embedded } });
+  }
+  std::ofstream file (getUrlsPath ());
+  if (!file.is_open ())
+    return -1;
+  file << jsonData.dump (4);
+  return 0;
+}
+
+std::string RssManager::getSourcesAsList () {
+  std::string sourcesList;
+  sourcesList = "```txt\n**Available RSS Sources:**\n";
+  for (const auto& url : urls_) {
+    sourcesList += "- " + url.url + (url.embedded ? " (embedded)" : " (non-embedded)") + "\n";
+  }
+  sourcesList += "```";
+  return sourcesList.empty () ? "No RSS sources available." : sourcesList;
 }
 
 int RssManager::loadUrls () {
@@ -109,22 +146,27 @@ int RssManager::saveSeenHash (const std::string& hash) {
 }
 
 std::string RssManager::downloadFeed (const std::string& url) {
-  CURL* curl = curl_easy_init ();
-  if (!curl)
-    return "";
+  std::string buffer = "";
+  try {
+    CURL* curl = curl_easy_init ();
+    if (!curl)
+      return "";
 
-  std::string buffer;
-  curl_easy_setopt (curl, CURLOPT_URL, url.c_str ());
-  curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-  curl_easy_setopt (curl, CURLOPT_WRITEDATA, &buffer);
-  curl_easy_setopt (curl, CURLOPT_FOLLOWLOCATION, 1L);
-  curl_easy_setopt (curl, CURLOPT_SSL_VERIFYPEER, 0L);
+    curl_easy_setopt (curl, CURLOPT_URL, url.c_str ());
+    curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt (curl, CURLOPT_WRITEDATA, &buffer);
+    curl_easy_setopt (curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt (curl, CURLOPT_SSL_VERIFYPEER, 0L);
 
-  CURLcode res = curl_easy_perform (curl);
-  curl_easy_cleanup (curl);
+    CURLcode res = curl_easy_perform (curl);
+    curl_easy_cleanup (curl);
 
-  if (res != CURLE_OK) {
-    LOG_E_STREAM << "CURL error: " << curl_easy_strerror (res) << std::endl;
+    if (res != CURLE_OK) {
+      LOG_E_STREAM << "CURL error: " << curl_easy_strerror (res) << std::endl;
+      return "";
+    }
+  } catch (const std::exception& e) {
+    LOG_E_STREAM << "Exception during CURL operation: " << e.what () << std::endl;
     return "";
   }
 
