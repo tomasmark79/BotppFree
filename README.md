@@ -4,27 +4,21 @@
 
 # Bot++
 
-Univerzální Discord Bot s podporou RSS čtečky.
+Universal Discord Bot with RSS reader support.
  
- > Cílem bota servírování novinek z definovaných zdrojů RSS do specifického kanálu.
+The bot is currently running in test mode on the largest Discord Server Linux CZ/SK - [Invitation](https://discord.gg/MBuvrRWQR6)
 
-Bot v tuto dobu běží v testovacím módu na největším Discord Serveru Linux CZ/SK - [Pozvánka](https://discord.gg/MBuvrRWQR6)
+### Features
 
- - project je open source, a je možné jej použít kýmkoli a kdekoli
- - stav projektu je nyní ve velmi ranné fázi testování
-
-### Některé vlastnosti
-
-- obsahuje vlastní paměťovou datovou strukturu v podobě **fronty**
-- přidávání do fronty se provádí v samostatném vlákně
-- zamezení redundance vystavených článků (i po restartu programu) 
-- výtisk náhodných zpráv do definovaného kanálu se děje v samostatném vlákně
-- pokud je fronta prázdná, nevypíše se nic a čeká se na nové položky, které RSS zdroj poskytne
-- za běhu programu je možné editovat konfiguraci se zdroji RSS
+#### RSS
+- support for collecting and displaying posts from RSS 1.0, RSS 2.0, Atom sources
+- display as message, display as thread, forwarding to other servers
+- prevention of redundancy of displayed items thanks to hash function (even after program restart)
+- RSS source configuration in external file and during program runtime
  
 ### ToDo
 
-  - etxerní příkazy pro fetch feed jsou do odvolání vypnuty
+  - external commands for fetch feed are disabled until further notice
 
  ---
 
