@@ -137,7 +137,6 @@ int DiscordBot::initCluster () {
 void DiscordBot::loadOnSlashCommands () {
 
   bot_->on_slashcommand ([&, this] (const dpp::slashcommand_t& event) {
-
     // listsources
     if (event.command.get_command_name () == "listsources") {
       std::string sources = rss.getSourcesAsList ();
@@ -238,8 +237,9 @@ void DiscordBot::loadOnReadyCommands () {
   bot_->on_ready ([&] (const dpp::ready_t& event) {
     // clang-format off
 
-    // 
-
+    // getfeednow
+    bot_->global_command_create (dpp::slashcommand ("getfeednow", "Get RSS feed now",
+                                                   bot_->me.id));
     // list sources - list all RSS sources
     bot_->global_command_create (dpp::slashcommand ("listsources", "List all RSS sources",
                                                    bot_->me.id));

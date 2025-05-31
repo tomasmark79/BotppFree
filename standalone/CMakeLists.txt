@@ -35,7 +35,6 @@ option(ENABLE_HARDENING "Enable security hardening options" OFF)
 include(../cmake/tmplt-ipo.cmake)
 option(ENABLE_IPO "Enable Interprocedural Optimization" OFF)
 # === ccache
-include(../cmake/ccache.cmake)
 option(ENABLE_CCACHE "Enable ccache" ON)
 # === linting C/C++ code
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -103,7 +102,6 @@ list(APPEND sources ${CMAKE_CURRENT_SOURCE_DIR}/src/Main.cpp)
 # ==============================================================================
 add_executable(${STANDALONE_NAME} ${sources})
 
-apply_ccache(${STANDALONE_NAME})
 apply_hardening(${STANDALONE_NAME})
 apply_sanitizers(${STANDALONE_NAME})
 

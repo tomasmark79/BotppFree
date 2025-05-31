@@ -14,7 +14,7 @@ RssManager::RssManager () : rng_ (std::random_device{}()) {
 }
 
 int RssManager::initialize () {
-  
+
   // Create default files if they don't exist
   if (!std::filesystem::exists (getUrlsPath ())) {
     nlohmann::json defaultUrls = nlohmann::json::array (
@@ -234,6 +234,7 @@ RSSFeed RssManager::parseRSS (const std::string& xmlData, bool embedded) {
 
   // Parse items
   int newItems = 0;
+  int duplicateItems = 0;
   const char* itemTag = isAtom ? "entry" : "item";
 
   for (auto item = firstItem; item; item = item->NextSiblingElement (itemTag)) {
@@ -282,15 +283,18 @@ RSSFeed RssManager::parseRSS (const std::string& xmlData, bool embedded) {
 
     // Skip if already seen
     if (seenHashes_.find (rssItem.hash) != seenHashes_.end ()) {
-      LOG_D_STREAM << "Skipping duplicate item: " << rssItem.title << std::endl;
+      // LOG_D_STREAM << "Skipping duplicate item: " << rssItem.title << std::endl;
+      duplicateItems++;
       continue;
     }
+    
     feed.addItem (rssItem);
     newItems++;
   }
 
   LOG_I_STREAM << "Parsed " << newItems << " new items from " << (isAtom ? "Atom" : "RSS")
-               << " feed (embedded: " << (embedded ? "true" : "false") << ")." << std::endl;
+               << " feed (embedded: " << (embedded ? "true" : "false") << "), skipped "
+               << duplicateItems << " duplicates." << std::endl;
   return feed;
 }
 
