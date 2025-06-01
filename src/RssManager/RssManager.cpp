@@ -10,7 +10,7 @@ size_t WriteCallback (void* contents, size_t size, size_t nmemb, void* userp) {
   return size * nmemb;
 }
 
-// RSSItem Struct Implementation 
+// RSSItem Struct Implementation
 RSSItem::RSSItem (const std::string& t, const std::string& l, const std::string& d,
                   const std::string& date = "", bool e = false)
     : title (t), link (l), description (d), pubDate (date), embedded (e) {

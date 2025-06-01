@@ -6,6 +6,7 @@
 #include <dpp/dpp.h>
 #include <memory>
 
+// curl https temporary fix
 // RedHats childs needs for failed ssl contexts in
 // in /etc/ssl/openssl.cnf
 // https://github.com/openssl/openssl/discussions/23016
@@ -49,8 +50,11 @@ private:
   bool startPollingPrintFeed ();
   bool startPollingFetchFeed ();
 
+  int isValidMessageRequest (const std::string& message, dpp::snowflake channelId);
+
   int printStringToChannelAsThread (const std::string& message, dpp::snowflake channelId,
                                     const std::string& threadName = "", bool allowEmbedded = true);
+  int checkThreadName (const std::string& threadName);
   int printStringToChannel (const std::string& str, dpp::snowflake channelId,
                             const dpp::slashcommand_t& event, bool allowEmbedded);
 
@@ -58,15 +62,6 @@ private:
 
   void loadOnSlashCommands ();
   void loadOnReadyCommands ();
-
-  void printFullFeedToChannel (const std::string& url, dpp::snowflake channelId,
-                               const dpp::slashcommand_t& event, bool allowEmbedded);
-  void printRandomFeedToChannel (const std::string& url, dpp::snowflake channelId,
-                                 const dpp::slashcommand_t& event, bool allowEmbedded);
-  void sendRssFeedViaReply (const std::string& url, const dpp::slashcommand_t& event,
-                            bool allowEmbedded, bool fullFeed);
-  void sendRssFeedToChannel (const std::string& url, dpp::snowflake channelId, bool allowEmbedded,
-                             bool fullFeed);
 };
 
 #endif
