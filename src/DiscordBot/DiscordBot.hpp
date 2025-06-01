@@ -54,7 +54,7 @@ private:
 
   int printStringToChannelAsThread (const std::string& message, dpp::snowflake channelId,
                                     const std::string& threadName = "", bool allowEmbedded = true);
-  int checkThreadName (const std::string& threadName);
+  std::string checkThreadName (const std::string& threadName);
   int printStringToChannel (const std::string& str, dpp::snowflake channelId,
                             const dpp::slashcommand_t& event, bool allowEmbedded);
 

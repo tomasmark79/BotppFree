@@ -6,7 +6,7 @@
 #include <thread>
 #include <atomic>
 
-// #define PUBLIC_RELEASED_DISCORD_BOT
+#define PUBLIC_RELEASED_DISCORD_BOT
 
 constexpr size_t DISCORD_MAX_MSG_LEN = 2000; // (as per Discord API docs)
 #define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.bot++.key"
@@ -316,18 +316,18 @@ int DiscordBot::printStringToChannel (const std::string& message, dpp::snowflake
   return 0;
 }
 
-int DiscordBot::checkThreadName (const std::string& threadName) {
+std::string DiscordBot::checkThreadName (const std::string& threadName) {
   if (threadName.empty ()) {
     LOG_W_STREAM << "Thread name is empty, generating a default name." << std::endl;
-    return -1;
+    return "";
   }
   if (threadName.size () > 100) {
     LOG_E_STREAM << "Thread name exceeds maximum length of 100 characters. "
                     "Truncating to fit the limit."
                  << std::endl;
-    return -2;
+    return threadName.substr (0, 100);
   }
-  return 0;
+  return threadName;
 }
 
 int DiscordBot::printStringToChannelAsThread (const std::string& message, dpp::snowflake channelId,
@@ -337,10 +337,7 @@ int DiscordBot::printStringToChannelAsThread (const std::string& message, dpp::s
   if (validationResult != 0) {
     return validationResult;
   }
-  int threadNameCheck = checkThreadName (threadName);
-  if (threadNameCheck != 0) {
-    return threadNameCheck;
-  }
+  std::string finalThreadName = checkThreadName (threadName);
 
 #ifdef PUBLIC_RELEASED_DISCORD_BOT
   dpp::message msg (channelId, message);
