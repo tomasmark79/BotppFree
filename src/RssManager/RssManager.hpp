@@ -14,7 +14,6 @@
 struct RSSUrl {
   std::string url;
   bool embedded;
-
   RSSUrl () : url (""), embedded (false) {
   }
   RSSUrl (const std::string& u, bool e = false) : url (u), embedded (e) {
@@ -32,19 +31,9 @@ struct RSSItem {
   RSSItem () : embedded (false) {
   }
   RSSItem (const std::string& t, const std::string& l, const std::string& d,
-           const std::string& date = "", bool e = false)
-      : title (t), link (l), description (d), pubDate (date), embedded (e) {
-    generateHash ();
-  }
-
-  void generateHash () {
-    std::hash<std::string> hasher;
-    hash = std::to_string (hasher (title + link + description));
-  }
-
-  std::string toMarkdownLink () const {
-    return "[" + title + "](" + link + ")";
-  }
+           const std::string& date, bool e);
+  void generateHash ();
+  std::string toMarkdownLink () const;
 };
 
 struct RSSFeed {
@@ -52,18 +41,9 @@ struct RSSFeed {
   std::string description;
   std::string link;
   std::vector<RSSItem> items;
-
-  void addItem (const RSSItem& item) {
-    items.push_back (item);
-  }
-
-  size_t size () const {
-    return items.size ();
-  }
-
-  void clear () {
-    items.clear ();
-  }
+  void addItem (const RSSItem& item);
+  size_t size () const;
+  void clear ();
 };
 
 class RssManager {
@@ -90,6 +70,7 @@ public:
   }
   std::string getSourcesAsList ();
   int addUrl (const std::string& url, bool embedded);
+
 private:
   RSSFeed feed_;
   std::vector<RSSUrl> urls_;

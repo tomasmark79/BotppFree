@@ -148,7 +148,8 @@ void DiscordBot::loadOnSlashCommands () {
       try {
         RSSItem item = rss.getRandomItem ();
         if (!item.title.empty ()) {
-          LOG_D_STREAM << "getfeednow Random item: " << item.title << " emb: " << item.embedded << std::endl;
+          LOG_D_STREAM << "getfeednow Random item: " << item.title << " emb: " << item.embedded
+                       << std::endl;
 #ifdef IS_RELEASED_DISCORD_BOT
           printStringToChannel (item.toMarkdownLink (), channelRss, event, item.embedded);
 #endif
@@ -347,12 +348,12 @@ int DiscordBot::printStringToChannel (const std::string& message, dpp::snowflake
   if (!allowEmbedded) {
     msg.set_flags (dpp::m_suppress_embeds); // Suppress embeds if allowEmbedded is false
   }
-  
+
   if (event.command.id != 0) {
     // If event is a slash command, reply to it
     event.reply (msg);
-    LOG_I_STREAM << "Message replied to slash command in channel "
-                 << event.command.channel_id << ": " << message << std::endl;
+    LOG_I_STREAM << "Message replied to slash command in channel " << event.command.channel_id
+                 << ": " << message << std::endl;
   } else {
 
     // If no event, send as a direct message to the channel
