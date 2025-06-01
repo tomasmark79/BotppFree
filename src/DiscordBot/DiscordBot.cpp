@@ -153,8 +153,6 @@ void DiscordBot::loadOnSlashCommands () {
       try {
         RSSItem item = rss.getRandomItem ();
         if (!item.title.empty ()) {
-          LOG_D_STREAM << "getfeednow Random item: " << item.title << " emb: " << item.embedded
-                       << std::endl;
           printStringToChannel (item.toMarkdownLink (), channelRss, event, item.embedded);
         } else {
           LOG_W_STREAM << "No items found in the feed queue." << std::endl;
