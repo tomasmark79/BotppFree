@@ -10,9 +10,34 @@ size_t WriteCallback (void* contents, size_t size, size_t nmemb, void* userp) {
   return size * nmemb;
 }
 
-RssManager::RssManager () : rng_ (std::random_device{}()) {
+// RSSItem Struct Implementation 
+RSSItem::RSSItem (const std::string& t, const std::string& l, const std::string& d,
+                  const std::string& date = "", bool e = false)
+    : title (t), link (l), description (d), pubDate (date), embedded (e) {
+  generateHash ();
+}
+void RSSItem::generateHash () {
+  std::hash<std::string> hasher;
+  hash = std::to_string (hasher (title + link + description));
+}
+std::string RSSItem::toMarkdownLink () const {
+  return "[" + title + "](" + link + ")";
 }
 
+// RSSFeed Struct Implementation
+void RSSFeed::addItem (const RSSItem& item) {
+  items.push_back (item);
+}
+size_t RSSFeed::size () const {
+  return items.size ();
+}
+void RSSFeed::clear () {
+  items.clear ();
+}
+
+// RssManager Class Implementation
+RssManager::RssManager () : rng_ (std::random_device{}()) {
+}
 int RssManager::initialize () {
 
   // Create default files if they don't exist
@@ -287,7 +312,7 @@ RSSFeed RssManager::parseRSS (const std::string& xmlData, bool embedded) {
       duplicateItems++;
       continue;
     }
-    
+
     feed.addItem (rssItem);
     newItems++;
   }
