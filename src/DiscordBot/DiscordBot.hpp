@@ -61,6 +61,7 @@ private:
   void addSource (const std::string& url, bool embedded);
 
   void loadOnSlashCommands ();
+  int getQueueSize ();
   void loadOnReadyCommands ();
 };
 
