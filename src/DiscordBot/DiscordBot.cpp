@@ -139,6 +139,21 @@ int DiscordBot::initCluster () {
 void DiscordBot::loadOnSlashCommands () {
 
   bot_->on_slashcommand ([&, this] (const dpp::slashcommand_t& event) {
+    if (event.command.get_command_name () == "queue") {
+      try {
+        size_t itemCount = rss.getItemCount ();
+        if (itemCount == 0) {
+          event.reply ("No items in the RSS feed queue.");
+          return;
+        }
+        std::string response
+            = "RSS feed queue contains " + std::to_string (itemCount) + " items.\n";
+        LOG_I_STREAM << response;
+        event.reply (response);
+      } catch (const std::runtime_error& e) {
+        LOG_E_STREAM << "Error: " << e.what () << std::endl;
+      }
+    }
     if (event.command.get_command_name () == "listsources") {
       std::string sources = rss.getSourcesAsList ();
       if (sources.empty ()) {
@@ -156,6 +171,7 @@ void DiscordBot::loadOnSlashCommands () {
           printStringToChannel (item.toMarkdownLink (), channelRss, event, item.embedded);
         } else {
           LOG_W_STREAM << "No items found in the feed queue." << std::endl;
+          event.reply ("No items found in the RSS feed queue.");
         }
       } catch (const std::runtime_error& e) {
         LOG_E_STREAM << "Error: " << e.what () << std::endl;
@@ -232,6 +248,8 @@ void DiscordBot::loadOnSlashCommands () {
 // onReadyHandlers
 void DiscordBot::loadOnReadyCommands () {
   bot_->on_ready ([&] (const dpp::ready_t& event) {
+    bot_->global_command_create (
+        dpp::slashcommand ("queue", "Get queue of RSS items", bot_->me.id));
     bot_->global_command_create (dpp::slashcommand ("getfeednow", "Get RSS feed now", bot_->me.id));
     bot_->global_command_create (
         dpp::slashcommand ("listsources", "List all RSS sources", bot_->me.id));
