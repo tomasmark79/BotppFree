@@ -145,9 +145,17 @@ void DiscordBot::loadOnSlashCommands () {
       try {
         event.reply ("Refetching all RSS feeds...");
         rss.fetchAllFeeds ();
-        dpp::message msg (event.command.channel_id, ALL_FEEDS_REFETCHED);
+        size_t itemCount = rss.getItemCount ();
+        if (itemCount == 0) {
+          LOG_W_STREAM << NO_ITEMS_IN_QUEUE << std::endl;
+          event.reply (NO_ITEMS_IN_QUEUE);
+          return;
+        }
+        std::string response
+            = "All RSS feeds have been refetched successfully. Queue contains "
+              + std::to_string (itemCount) + " items.\n";
+        dpp::message msg (event.command.channel_id, response);
         bot_->message_create(msg);
-        LOG_I_STREAM << ALL_FEEDS_REFETCHED << std::endl;
       } catch (const std::runtime_error& e) {
         LOG_E_STREAM << "Error: " << e.what () << std::endl;
         event.reply ("Error refetching feeds: " + std::string (e.what ()));
