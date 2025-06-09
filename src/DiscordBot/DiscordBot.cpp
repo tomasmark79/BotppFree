@@ -8,6 +8,7 @@
 
 #define PUBLIC_RELEASED_DISCORD_BOT
 
+const std::string NO_ITEMS_IN_QUEUE = "No items in the RSS feed queue.";
 constexpr size_t DISCORD_MAX_MSG_LEN = 2000; // (as per Discord API docs)
 #define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.bot++.key"
 const dpp::snowflake channelRss = 1375852042790244352;
@@ -138,12 +139,13 @@ int DiscordBot::initCluster () {
 // onSlashCommands
 void DiscordBot::loadOnSlashCommands () {
 
+
   bot_->on_slashcommand ([&, this] (const dpp::slashcommand_t& event) {
     if (event.command.get_command_name () == "queue") {
       try {
         size_t itemCount = rss.getItemCount ();
         if (itemCount == 0) {
-          event.reply ("No items in the RSS feed queue.");
+          event.reply (NO_ITEMS_IN_QUEUE);
           return;
         }
         std::string response
@@ -170,8 +172,8 @@ void DiscordBot::loadOnSlashCommands () {
         if (!item.title.empty ()) {
           printStringToChannel (item.toMarkdownLink (), channelRss, event, item.embedded);
         } else {
-          LOG_W_STREAM << "No items found in the feed queue." << std::endl;
-          event.reply ("No items found in the RSS feed queue.");
+          LOG_W_STREAM << NO_ITEMS_IN_QUEUE << std::endl;
+          event.reply (NO_ITEMS_IN_QUEUE);
         }
       } catch (const std::runtime_error& e) {
         LOG_E_STREAM << "Error: " << e.what () << std::endl;
