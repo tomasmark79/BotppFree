@@ -9,6 +9,7 @@
 #define PUBLIC_RELEASED_DISCORD_BOT
 
 const std::string NO_ITEMS_IN_QUEUE = "No items in the RSS feed queue.";
+const std::string ALL_FEEDS_REFETCHED = "All RSS feeds have been refetched successfully.";
 constexpr size_t DISCORD_MAX_MSG_LEN = 2000; // (as per Discord API docs)
 #define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.bot++.key"
 const dpp::snowflake channelRss = 1375852042790244352;
@@ -139,8 +140,20 @@ int DiscordBot::initCluster () {
 // onSlashCommands
 void DiscordBot::loadOnSlashCommands () {
 
-
   bot_->on_slashcommand ([&, this] (const dpp::slashcommand_t& event) {
+    if (event.command.get_command_name () == "refetch") {
+      try {
+        event.reply ("Refetching all RSS feeds...");
+        rss.fetchAllFeeds ();
+        dpp::message msg (event.command.channel_id, ALL_FEEDS_REFETCHED);
+        bot_->message_create(msg);
+        LOG_I_STREAM << ALL_FEEDS_REFETCHED << std::endl;
+      } catch (const std::runtime_error& e) {
+        LOG_E_STREAM << "Error: " << e.what () << std::endl;
+        event.reply ("Error refetching feeds: " + std::string (e.what ()));
+      }
+      return;
+    }
     if (event.command.get_command_name () == "queue") {
       try {
         size_t itemCount = rss.getItemCount ();
@@ -250,6 +263,8 @@ void DiscordBot::loadOnSlashCommands () {
 // onReadyHandlers
 void DiscordBot::loadOnReadyCommands () {
   bot_->on_ready ([&] (const dpp::ready_t& event) {
+    bot_->global_command_create (
+        dpp::slashcommand ("refetch", "Refetch all RSS feeds", bot_->me.id));
     bot_->global_command_create (
         dpp::slashcommand ("queue", "Get queue of RSS items", bot_->me.id));
     bot_->global_command_create (dpp::slashcommand ("getfeednow", "Get RSS feed now", bot_->me.id));
