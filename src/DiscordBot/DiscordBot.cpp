@@ -8,6 +8,12 @@
 
 #define PUBLIC_RELEASED_DISCORD_BOT
 
+const int START_SLOW_MODE_AT_HOUR = 22;           // Start slow mode at 22:00
+const int STOP_SLOW_MODE_AT_HOUR = 7;             // Stop slow mode at 07:00
+const int SLOW_MODE_POLLING_INTERVAL = 60 * 180;  // 180 minutes (3 hours)
+const int NORMAL_MODE_POLLING_INTERVAL = 60 * 23; // 23 minutes
+const int FEED_FETCH_INTERVAL = 60 * 60 * 2;      // 2 hours
+
 const std::string NO_ITEMS_IN_QUEUE = "No items in the RSS feed queue.";
 const std::string ALL_FEEDS_REFETCHED = "All RSS feeds have been refetched successfully.";
 constexpr size_t DISCORD_MAX_MSG_LEN = 2000; // (as per Discord API docs)
@@ -30,11 +36,6 @@ DiscordBot::DiscordBot () {
 // Printing feed items
 std::atomic<bool> isPollingPrintFeedRunning (false);
 std::atomic<bool> stopPollingPrintFeed (false);
-#ifdef PUBLIC_RELEASED_DISCORD_BOT
-int pollingPrintFeedIntervalInSec = 60 * 23; // 23 minutes
-#else
-int pollingPrintFeedIntervalInSec = 4;
-#endif
 bool DiscordBot::startPollingPrintFeed () {
   std::thread pollingThreadPrintFeed ([&] () -> void {
     while (!stopPollingPrintFeed.load ()) {
@@ -50,7 +51,18 @@ bool DiscordBot::startPollingPrintFeed () {
         LOG_E_STREAM << "Error: " << e.what () << std::endl;
         isPollingPrintFeedRunning.store (false);
       }
-      std::this_thread::sleep_for (std::chrono::seconds (pollingPrintFeedIntervalInSec));
+
+      int printFeedInterval = 0;
+      std::time_t now = std::time (nullptr);
+      std::tm* localTime = std::localtime (&now);
+
+      if ((localTime->tm_hour >= START_SLOW_MODE_AT_HOUR)
+          || (localTime->tm_hour < STOP_SLOW_MODE_AT_HOUR)) {
+        printFeedInterval = SLOW_MODE_POLLING_INTERVAL;
+      } else {
+        printFeedInterval = NORMAL_MODE_POLLING_INTERVAL;
+      }
+      std::this_thread::sleep_for (std::chrono::seconds (printFeedInterval));
     }
   });
   pollingThreadPrintFeed.detach ();
@@ -68,12 +80,6 @@ bool DiscordBot::startPollingPrintFeed () {
 // Fetching feeds
 std::atomic<bool> isPollingFetchFeedRunning (false);
 std::atomic<bool> stopPollingFetchFeed (false);
-#ifdef PUBLIC_RELEASED_DISCORD_BOT
-int pollingFetchFeedIntervalInSec = 60 * 60 * 2; // 2 hours
-#else
-int pollingFetchFeedIntervalInSec = 15;
-#endif
-
 bool DiscordBot::startPollingFetchFeed () {
   std::thread pollingThreadFetchFeed ([&] () -> void {
     while (!stopPollingFetchFeed.load ()) {
@@ -84,7 +90,7 @@ bool DiscordBot::startPollingFetchFeed () {
         LOG_E_STREAM << "Error: " << e.what () << std::endl;
         isPollingFetchFeedRunning.store (false);
       }
-      std::this_thread::sleep_for (std::chrono::seconds (pollingFetchFeedIntervalInSec));
+      std::this_thread::sleep_for (std::chrono::seconds (FEED_FETCH_INTERVAL));
     }
   });
   pollingThreadFetchFeed.detach ();
@@ -151,11 +157,10 @@ void DiscordBot::loadOnSlashCommands () {
           event.reply (NO_ITEMS_IN_QUEUE);
           return;
         }
-        std::string response
-            = "All RSS feeds have been refetched successfully. Queue contains "
-              + std::to_string (itemCount) + " items.\n";
+        std::string response = "All RSS feeds have been refetched successfully. Queue contains "
+                               + std::to_string (itemCount) + " items.\n";
         dpp::message msg (event.command.channel_id, response);
-        bot_->message_create(msg);
+        bot_->message_create (msg);
       } catch (const std::runtime_error& e) {
         LOG_E_STREAM << "Error: " << e.what () << std::endl;
         event.reply ("Error refetching feeds: " + std::string (e.what ()));
