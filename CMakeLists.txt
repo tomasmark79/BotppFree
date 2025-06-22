@@ -44,7 +44,7 @@ set(LIBRARY_NAME IBot)
 set(LIBRARY_NAMESPACE dotname)
 project(
     ${LIBRARY_NAME}
-    VERSION 0.0.4
+    VERSION 0.0.5
     LANGUAGES C CXX
     DESCRIPTION "template Copyright (c) 2024 TomasMark [at] digitalspace.name"
     HOMEPAGE_URL "https://github.com/tomasmark79")
