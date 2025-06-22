@@ -44,7 +44,7 @@ set(LIBRARY_NAME IBot)
 set(LIBRARY_NAMESPACE dotname)
 project(
     ${LIBRARY_NAME}
-    VERSION 0.0.6a
+    VERSION 0.0.6
     LANGUAGES C CXX
     DESCRIPTION "template Copyright (c) 2024 TomasMark [at] digitalspace.name"
     HOMEPAGE_URL "https://github.com/tomasmark79")
@@ -75,7 +75,6 @@ find_package(ZLIB REQUIRED)
 find_package(Opus REQUIRED)
 find_package(CURL REQUIRED)
 find_package(OpenSSL REQUIRED)
-#find_package(yaml-cpp REQUIRED)
 
 # ==============================================================================
 # CPM.cmake dependencies - take care conflicts
