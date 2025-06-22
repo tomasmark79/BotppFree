@@ -86,7 +86,7 @@ int printAssets (const std::filesystem::path& assetsPath) {
     }
 
     for (const auto& file : files) {
-      LOG_D_STREAM << "╰➤ " << file << std::endl;
+      LOG_D_STREAM << file << std::endl;
     }
   } catch (const std::exception& e) {
     std::cerr << "Error: " << e.what () << std::endl;
@@ -102,17 +102,17 @@ int runApp (int argc, const char* argv[]) {
   LOG_I_STREAM << "Starting " << AppContext::standaloneName << " ..." << std::endl;
 
 #ifdef EMSCRIPTEN
-  LOG_I_STREAM << "╰➤ C++ Running in Emscripten environment" << std::endl;
+  LOG_I_STREAM << "C++ Running in Emscripten environment" << std::endl;
 #endif
 #ifdef __EMSCRIPTEN_PTHREADS__
-  LOG_I_STREAM << " ⤷ Emscripten C++ with pthreads support" << std::endl;
+  LOG_I_STREAM << "Emscripten C++ with pthreads support" << std::endl;
 #endif
 
   if (handlesArguments (argc, argv) != 0) {
     return 1;
   }
 
-  // Performance::simpleCpuBenchmark ();
+  Performance::simpleCpuBenchmark ();
 
   // I know it is smartpointer, but we need to free it before exit scope bracelet
   uniqueLib = nullptr;
