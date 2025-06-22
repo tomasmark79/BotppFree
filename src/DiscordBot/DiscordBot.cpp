@@ -21,6 +21,16 @@ constexpr size_t DISCORD_MAX_MSG_LEN = 2000; // (as per Discord API docs)
 const dpp::snowflake channelRss = 1375852042790244352;
 RssManager rss;
 
+std::string botCommandsHelp = R"(
+`/bot` - tento výstup
+`/queue` - položky ve frontě
+`/refetch` - získat feeds z webu
+`/getfeednow` - tisknout feed právě teď
+`/listsources` - tisknout seznam zdrojů
+`/addsource` - přidat zdroj [rss 1.0, 2.0, Atom]
+`/addsource url:https://www.root.cz/rss/clanky/ embedded:true`
+)";
+
 DiscordBot::DiscordBot () {
   rss.initialize ();
 }
@@ -240,21 +250,18 @@ void DiscordBot::loadOnSlashCommands () {
       dpp::embed embed
           = dpp::embed ()
                 .set_color (dpp::colors::sti_blue)
-                .set_title ("TuX++ "
-                            + std::string (IBOT_VERSION + std::string (" 🐧 ") + DPP_VERSION_TEXT
-                                           + " loaded"))
+                .set_title (
+                    "🐧 TuX++ "
+                    + std::string (IBOT_VERSION + std::string ("\n📚 ") + DPP_VERSION_TEXT))
                 .set_url ("https://github.com/tomasmark79/BotppFree")
-                .set_author ("D🌀tName", "https://digitalspace.name",
+                .set_author ("D🌀tName (c) 2025", "https://digitalspace.name",
                              "https://digitalspace.name/avatar/avatarpix.png")
                 .set_description (this->getLinuxFastfetchCpp ().substr (0, 8192 - 2) + "\n")
                 .set_thumbnail ("https://digitalspace.name/avatar/Linux-Logo-1996-present.png")
-                .add_field ("Další informace",
-                            "Operační systém Linux používá Linux kernel, který vychází z myšlenek "
-                            "Unixu "
-                            "a respektuje příslušné standardy POSIX a Single UNIX Specification.")
+                .add_field ("/bot", botCommandsHelp, true)
                 //.add_field ("🩵🩵", "🩵🩵", true)
                 //.add_field ("🩵🩵", "🩵🩵", true)
-                .set_image ("https://digitalspace.name/avatar/Linux-Logo-1996-present.png")
+                .set_image ("https://digitalspace.name/avatar/tuxik.png")
                 .set_footer (dpp::embed_footer ()
                                  .set_text ("Ve spolupráci s Delirium")
                                  .set_icon ("https://digitalspace.name/avatar/Delirium.png"))
