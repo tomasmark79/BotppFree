@@ -22,19 +22,19 @@ const dpp::snowflake channelRss = 1375852042790244352;
 RssManager rss;
 
 std::string botCommandsHelp = R"(
-`/bot` - tento výstup
+`/bot` - informace o botu
 `/queue` - položky ve frontě
 `/refetch` - získat feeds z webu
 `/getfeednow` - tisknout feed právě teď
 `/listsources` - tisknout seznam zdrojů
 `/addsource` - přidat zdroj [rss 1.0, 2.0, Atom]
 `/addsource url:https://www.root.cz/rss/clanky/ embedded:true`
-`/runterminalcommand` - spustit příkaz v terminálu a vrátit výstup
 `/runterminalcommand command:fortune`
-`/runterminalcommand command:df -h`
-`/runterminalcommand command:free -h`
-`/runterminalcommand command:cat /etc/os-release`
-`/runterminalcommand command:fastfetch`
+`command:fortune`
+`command:df -h`
+`command:free -h`
+`command:fastfetch`
+`command:cat /etc/os-release`
 )";
 
 DiscordBot::DiscordBot () {
