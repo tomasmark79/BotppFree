@@ -29,6 +29,11 @@ std::string botCommandsHelp = R"(
 `/listsources` - tisknout seznam zdrojů
 `/addsource` - přidat zdroj [rss 1.0, 2.0, Atom]
 `/addsource url:https://www.root.cz/rss/clanky/ embedded:true`
+`/runterminalcommand` - spustit příkaz v terminálu a vrátit výstup
+`/runterminalcommand command:fortune`
+`/runterminalcommand command:df -h`
+`/runterminalcommand command:free -h`
+`/runterminalcommand command:cat /etc/os-release`
 )";
 
 DiscordBot::DiscordBot () {
@@ -243,6 +248,33 @@ void DiscordBot::loadOnSlashCommands () {
       rss.fetchAllFeeds ();
       return;
     }
+    if (event.command.get_command_name () == "runterminalcommand") {
+      std::string command = std::get<std::string> (event.get_parameter ("command"));
+      // allowed commands
+      if (command != "fortune" && command != "df -h" && command != "free -h"
+          && command != "cat /etc/os-release") {
+        event.reply ("Error: Command not allowed.");
+        return;
+      }
+      if (command.empty ()) {
+        event.reply ("Error: Command parameter is required.");
+        return;
+      }
+      try {
+        std::string output = runTerminalCommand (command);
+        if (output.empty ()) {
+          output = "Command executed successfully, but no output was returned.";
+        } else {
+          output = "```txt\n" + output + "\n```";
+        }
+        LOG_I_STREAM << "Command output: " << output << std::endl;
+        printStringToChannel (output, event.command.channel_id, event, false);
+      } catch (const std::runtime_error& e) {
+        LOG_E_STREAM << "Error executing command: " << e.what () << std::endl;
+        event.reply ("Error executing command: " + std::string (e.what ()));
+      }
+      return;
+    }
     if (event.command.get_command_name () == "ping") {
       event.reply ("Pong! 🏓");
     }
@@ -250,9 +282,8 @@ void DiscordBot::loadOnSlashCommands () {
       dpp::embed embed
           = dpp::embed ()
                 .set_color (dpp::colors::sti_blue)
-                .set_title (
-                    "🐧 TuX++ "
-                    + std::string (IBOT_VERSION + std::string ("\n📚 ") + DPP_VERSION_TEXT))
+                .set_title ("🐧 TuX++ "
+                            + std::string (IBOT_VERSION + std::string ("\n📚 ") + DPP_VERSION_TEXT))
                 .set_url ("https://github.com/tomasmark79/BotppFree")
                 .set_author ("D🌀tName (c) 2025", "https://digitalspace.name",
                              "https://digitalspace.name/avatar/avatarpix.png")
@@ -290,12 +321,19 @@ void DiscordBot::loadOnReadyCommands () {
     bot_->global_command_create (dpp::slashcommand ("getfeednow", "Get RSS feed now", bot_->me.id));
     bot_->global_command_create (
         dpp::slashcommand ("listsources", "List all RSS sources", bot_->me.id));
+
     bot_->global_command_create (
         dpp::slashcommand ("addsource", "Add a new RSS source", bot_->me.id)
             .add_option (dpp::command_option (dpp::co_string, "url", "URL of the RSS feed", true))
             .add_option (dpp::command_option (dpp::co_boolean, "embedded",
                                               "Whether the feed should be embedded in the message",
                                               false)));
+    bot_->global_command_create (
+        dpp::slashcommand ("runterminalcommand", "Run a terminal command and return the output",
+                           bot_->me.id)
+            .add_option (dpp::command_option (dpp::co_string, "command",
+                                              "The terminal command to run", true)));
+
     bot_->global_command_create (dpp::slashcommand ("ping", "Ping pong!", bot_->me.id));
     bot_->global_command_create (dpp::slashcommand ("bot", "About Bot++!", bot_->me.id));
     std::this_thread::sleep_for (std::chrono::seconds (5)); // delay to user readable debug output
@@ -308,12 +346,6 @@ int DiscordBot::isValidMessageRequest (const std::string& message, dpp::snowflak
   if (message.empty ()) {
     LOG_W_STREAM << "Message is empty, nothing to send." << std::endl;
     return -1;
-  }
-
-  if (message.size () > DISCORD_MAX_MSG_LEN) {
-    LOG_E_STREAM << "Message exceeds maximum length of " << DISCORD_MAX_MSG_LEN
-                 << " characters. Message will not be sent." << std::endl;
-    return -2;
   }
 
   if (channelId == 0) {
@@ -331,16 +363,23 @@ int DiscordBot::printStringToChannel (const std::string& message, dpp::snowflake
   }
 
 #ifdef PUBLIC_RELEASED_DISCORD_BOT
-  dpp::message msg (channelId, message);
+
+  // shortening the message if it exceeds Discord's maximum length
+  std::string truncatedMessage = message;
+  if (truncatedMessage.size () > DISCORD_MAX_MSG_LEN) {
+    truncatedMessage = truncatedMessage.substr (0, DISCORD_MAX_MSG_LEN - 3) + "...";
+  }
+
+  dpp::message msg (channelId, truncatedMessage);
   if (!allowEmbedded) {
     msg.set_flags (dpp::m_suppress_embeds); // Suppress embeds if allowEmbedded is false
   }
   if (event.command.id != 0) {
     event.reply (msg);
     LOG_I_STREAM << "Message replied to slash command in channel " << event.command.channel_id
-                 << ": " << message << std::endl;
+                 << ": " << truncatedMessage << std::endl;
   } else {
-    bot_->message_create (msg, [this, message,
+    bot_->message_create (msg, [this, truncatedMessage,
                                 channelId] (const dpp::confirmation_callback_t& callback) {
       if (callback.is_error ()) {
         LOG_E_STREAM << "Failed to create message: " << callback.get_error ().message << std::endl;
@@ -349,7 +388,8 @@ int DiscordBot::printStringToChannel (const std::string& message, dpp::snowflake
 
       const auto& createdMessage = callback.get<dpp::message> ();
       LOG_I_STREAM << "Message created successfully with ID: " << createdMessage.id << std::endl;
-      LOG_I_STREAM << "Message sent to channel " << channelId << ": " << message << std::endl;
+      LOG_I_STREAM << "Message sent to channel " << channelId << ": " << truncatedMessage
+                   << std::endl;
 
       // Crosspost the message if it's in a news channel
       bot_->message_crosspost (createdMessage.id, createdMessage.channel_id,
@@ -364,7 +404,7 @@ int DiscordBot::printStringToChannel (const std::string& message, dpp::snowflake
     });
   }
 #else
-  LOG_D_STREAM << "Fake message sent: " << message.substr (1, 40) << "..." << std::endl;
+  LOG_D_STREAM << "Fake message sent: " << truncatedMessage.substr (1, 40) << "..." << std::endl;
 #endif
   return 0;
 }
@@ -393,12 +433,18 @@ int DiscordBot::printStringToChannelAsThread (const std::string& message, dpp::s
   std::string finalThreadName = checkThreadName (threadName);
 
 #ifdef PUBLIC_RELEASED_DISCORD_BOT
-  dpp::message msg (channelId, message);
+  // shortening the message if it exceeds Discord's maximum length
+  std::string truncatedMessage = message;
+  if (truncatedMessage.size () > DISCORD_MAX_MSG_LEN) {
+    truncatedMessage = truncatedMessage.substr (0, DISCORD_MAX_MSG_LEN - 3) + "...";
+  }
+
+  dpp::message msg (channelId, truncatedMessage);
   if (!allowEmbedded) {
     msg.set_flags (dpp::m_suppress_embeds);
   }
   bot_->message_create (msg, [this, finalThreadName, channelId,
-                              message] (const dpp::confirmation_callback_t& callback) {
+                              truncatedMessage] (const dpp::confirmation_callback_t& callback) {
     if (callback.is_error ()) {
       LOG_E_STREAM << "Failed to create message: " << callback.get_error ().message << std::endl;
       return;
@@ -408,7 +454,7 @@ int DiscordBot::printStringToChannelAsThread (const std::string& message, dpp::s
     bot_->thread_create_with_message (
         finalThreadName, channelId, createdMessage.id, 60, // auto_archive_duration in minutes
         0, // rate_limit_per_user (0 = no rate limit)
-        [this, channelId, message] (const dpp::confirmation_callback_t& thread_callback) {
+        [this, channelId, truncatedMessage] (const dpp::confirmation_callback_t& thread_callback) {
           if (thread_callback.is_error ()) {
             LOG_E_STREAM << "Failed to create thread: " << thread_callback.get_error ().message
                          << std::endl;
@@ -416,8 +462,8 @@ int DiscordBot::printStringToChannelAsThread (const std::string& message, dpp::s
           }
           const auto& createdThread = thread_callback.get<dpp::thread> ();
           LOG_I_STREAM << "Thread created successfully with ID: " << createdThread.id << std::endl;
-          LOG_I_STREAM << "Message sent to channel " << channelId << " as thread: " << message
-                       << std::endl;
+          LOG_I_STREAM << "Message sent to channel " << channelId
+                       << " as thread: " << truncatedMessage << std::endl;
         });
   });
 #else // TESTING_DISCORD_BOT
@@ -455,4 +501,21 @@ std::string DiscordBot::getLinuxFastfetchCpp () {
       break;
   }
   return result.str ();
+}
+
+/// @brief  Run a terminal command and return the output.
+/// @param command
+/// @return
+std::string DiscordBot::runTerminalCommand (const std::string& command) {
+  std::string result;
+  std::array<char, 128> buffer;
+  std::unique_ptr<FILE, decltype (&pclose)> pipe (popen (command.c_str (), "r"), pclose);
+  if (!pipe) {
+    LOG_E_STREAM << "Failed to run command: " << command << std::endl;
+    return result;
+  }
+  while (fgets (buffer.data (), buffer.size (), pipe.get ()) != nullptr) {
+    result += buffer.data ();
+  }
+  return result;
 }

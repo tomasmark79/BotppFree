@@ -44,6 +44,7 @@ public:
 
 private:
   std::string getLinuxFastfetchCpp ();
+  std::string runTerminalCommand (const std::string& command);
   std::unique_ptr<dpp::cluster> bot_;
   int getTokenFromFile (std::string& token);
 
