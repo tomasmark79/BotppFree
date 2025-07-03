@@ -34,6 +34,7 @@ std::string botCommandsHelp = R"(
 `/runterminalcommand command:df -h`
 `/runterminalcommand command:free -h`
 `/runterminalcommand command:cat /etc/os-release`
+`/runterminalcommand command:fastfetch`
 )";
 
 DiscordBot::DiscordBot () {
@@ -252,7 +253,7 @@ void DiscordBot::loadOnSlashCommands () {
       std::string command = std::get<std::string> (event.get_parameter ("command"));
       // allowed commands
       if (command != "fortune" && command != "df -h" && command != "free -h"
-          && command != "cat /etc/os-release") {
+          && command != "cat /etc/os-release" && command != "fastfetch") {
         event.reply ("Error: Command not allowed.");
         return;
       }
