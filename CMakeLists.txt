@@ -44,7 +44,7 @@ set(LIBRARY_NAME IBot)
 set(LIBRARY_NAMESPACE dotname)
 project(
     ${LIBRARY_NAME}
-    VERSION 0.0.6
+    VERSION 0.0.7
     LANGUAGES C CXX
     DESCRIPTION "template Copyright (c) 2024 TomasMark [at] digitalspace.name"
     HOMEPAGE_URL "https://github.com/tomasmark79")
@@ -201,7 +201,7 @@ packageProject(
     INCLUDE_DIR "/include"
     INCLUDE_DESTINATION "include"
     INCLUDE_HEADER_PATTERN "*.h;*.hpp;*.hh;*.hxx"
-    DEPENDENCIES "fmt#11.1.0;CPMLicenses.cmake@0.0.7"
+    DEPENDENCIES "fmt#11.1.0;dpp#10.1.2;CPMLicenses.cmake@0.0.7"
     VERSION_HEADER "${LIBRARY_NAME}/version.h"
     EXPORT_HEADER "${LIBRARY_NAME}/export.h"
     NAMESPACE ${LIBRARY_NAMESPACE}
