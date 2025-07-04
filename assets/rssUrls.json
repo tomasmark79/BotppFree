@@ -26,5 +26,37 @@
     {
         "embedded": true,
         "url": "https://www.linuxtoday.com/backend/biglt.rss"
+    },
+    {
+        "embedded": true,
+        "url": "https://news.itsfoss.com/latest/rss"
+    },
+    {
+        "embedded": true,
+        "url": "https://www.phoronix.com/rss.php"
+    },
+    {
+        "embedded": true,
+        "url": "https://archlinux.org/feeds/news/"
+    },
+    {
+        "embedded": true,
+        "url": "https://linuxhandbook.com/rss/"
+    },
+    {
+        "embedded": true,
+        "url": "https://www.computertrends.cz/rss/clanky"
+    },
+    {
+        "embedded": true,
+        "url": "https://www.linuxexpres.cz/rss/clanky"
+    },
+    {
+        "embedded": true,
+        "url": "https://www.linuxexpres.cz/rss/novinky"
+    },
+    {
+        "embedded": true,
+        "url": "https://www.xda-developers.com/feed/tag/rss"
     }
 ]

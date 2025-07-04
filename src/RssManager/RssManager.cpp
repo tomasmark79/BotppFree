@@ -3,6 +3,7 @@
 #include <curl/curl.h>
 #include <fstream>
 #include <random>
+#include <regex>
 
 // CURL callback
 size_t WriteCallback (void* contents, size_t size, size_t nmemb, void* userp) {
@@ -182,12 +183,32 @@ std::string RssManager::downloadFeed (const std::string& url) {
     curl_easy_setopt (curl, CURLOPT_WRITEDATA, &buffer);
     curl_easy_setopt (curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt (curl, CURLOPT_SSL_VERIFYPEER, 0L);
+    curl_easy_setopt (curl, CURLOPT_SSL_VERIFYHOST, 0L);
+    
+    // Set User-Agent - many sites require this
+    curl_easy_setopt (curl, CURLOPT_USERAGENT, "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+    
+    // Set timeout options
+    curl_easy_setopt (curl, CURLOPT_TIMEOUT, 30L);
+    curl_easy_setopt (curl, CURLOPT_CONNECTTIMEOUT, 10L);
+    
+    // Accept any encoding
+    curl_easy_setopt (curl, CURLOPT_ENCODING, "");
+    
+    // Set HTTP headers
+    struct curl_slist *headers = nullptr;
+    headers = curl_slist_append(headers, "Accept: application/rss+xml, application/xml, text/xml");
+    headers = curl_slist_append(headers, "Cache-Control: no-cache");
+    curl_easy_setopt (curl, CURLOPT_HTTPHEADER, headers);
 
     CURLcode res = curl_easy_perform (curl);
+    
+    // Clean up headers
+    curl_slist_free_all(headers);
     curl_easy_cleanup (curl);
 
     if (res != CURLE_OK) {
-      LOG_E_STREAM << "CURL error: " << curl_easy_strerror (res) << std::endl;
+      LOG_E_STREAM << "CURL error for URL '" << url << "': " << curl_easy_strerror (res) << std::endl;
       return "";
     }
   } catch (const std::exception& e) {
@@ -288,13 +309,41 @@ RSSFeed RssManager::parseRSS (const std::string& xmlData, bool embedded) {
     } else {
       // Parse RSS item (existing code)
       if (auto titleEl = item->FirstChildElement ("title")) {
-        rssItem.title = titleEl->GetText () ? titleEl->GetText () : "";
+        // Handle CDATA sections properly by getting all text content
+        const char* text = titleEl->GetText ();
+        if (text) {
+          rssItem.title = text;
+        } else {
+          // If GetText() returns null, try to get text from child nodes (including CDATA)
+          auto textNode = titleEl->FirstChild ();
+          if (textNode && textNode->ToText ()) {
+            rssItem.title = textNode->Value () ? textNode->Value () : "";
+          }
+        }
       }
       if (auto linkEl = item->FirstChildElement ("link")) {
         rssItem.link = linkEl->GetText () ? linkEl->GetText () : "";
       }
       if (auto descEl = item->FirstChildElement ("description")) {
-        rssItem.description = descEl->GetText () ? descEl->GetText () : "";
+        // Handle CDATA sections properly by getting all text content
+        const char* text = descEl->GetText ();
+        if (text) {
+          rssItem.description = text;
+        } else {
+          // If GetText() returns null, try to get text from child nodes (including CDATA)
+          auto textNode = descEl->FirstChild ();
+          if (textNode && textNode->ToText ()) {
+            rssItem.description = textNode->Value () ? textNode->Value () : "";
+          }
+        }
+        
+        // Clean up excessive whitespace and newlines
+        std::string& desc = rssItem.description;
+        // Replace multiple whitespace characters with single space
+        std::regex ws_re ("\\s+");
+        desc = std::regex_replace (desc, ws_re, " ");
+        // Trim leading/trailing whitespace
+        desc = std::regex_replace (desc, std::regex ("^\\s+|\\s+$"), "");
       }
       if (auto dateEl = item->FirstChildElement ("pubDate")) {
         rssItem.pubDate = dateEl->GetText () ? dateEl->GetText () : "";
