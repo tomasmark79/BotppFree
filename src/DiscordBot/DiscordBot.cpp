@@ -18,7 +18,9 @@ const std::string NO_ITEMS_IN_QUEUE = "No items in the RSS feed queue.";
 const std::string ALL_FEEDS_REFETCHED = "All RSS feeds have been refetched successfully.";
 constexpr size_t DISCORD_MAX_MSG_LEN = 2000; // (as per Discord API docs)
 #define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.bot++.key"
-const dpp::snowflake channelRss = 1375852042790244352;
+
+constexpr dpp::snowflake channelRss = 1375852042790244352;
+
 RssManager rss;
 
 const std::string botCommandsHelp = R"(
