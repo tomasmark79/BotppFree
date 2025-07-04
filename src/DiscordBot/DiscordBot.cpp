@@ -25,17 +25,18 @@ RssManager rss;
 
 const std::string botCommandsHelp = R"(
 `/bot` - display this information
+`/env` - display environment information
 `/queue` - number of feeds in queue
 `/refetch` - fetch new feeds from web
 `/getfeednow` - print feed right now
 `/listsources` - list RSS sources
 `/addsource` - add RSS source [RSS 1.0, 2.0, Atom]
 `/addsource url:https://www.root.cz/rss/clanky/ embedded:true`
-`/runterminalcommand` `fortune` `df -h` `free -h` `fastfetch` `cat /etc/os-release`
+`/runterminalcommand` `fortune` `df -h` `free -h` `cat /etc/os-release`
 )";
 
 const std::string botDescription
-  = R"(written in C++ using the [DotNameCpp](https://github.com/tomasmark79/DotNameCppFree) project template and utilizes the [DPP](https://github.com/brainboxdotcc/DPP) library for Discord API access.)";
+    = R"(written in C++ using the [DotNameCpp](https://github.com/tomasmark79/DotNameCppFree) project template and utilizes the [DPP](https://github.com/brainboxdotcc/DPP) library for Discord API access.)";
 
 DiscordBot::DiscordBot () {
   rss.initialize ();
@@ -253,7 +254,7 @@ void DiscordBot::loadOnSlashCommands () {
       std::string command = std::get<std::string> (event.get_parameter ("command"));
       // allowed commands
       if (command != "fortune" && command != "df -h" && command != "free -h"
-          && command != "cat /etc/os-release" && command != "fastfetch") {
+          && command != "cat /etc/os-release" && command != "fastfetch --logo none") {
         event.reply ("Error: Command not allowed.");
         return;
       }
@@ -301,6 +302,16 @@ void DiscordBot::loadOnSlashCommands () {
       dpp::message msg (event.command.channel_id, embed);
       event.reply (msg);
     }
+    if (event.command.get_command_name () == "env") {
+      std::string envInfo = getLinuxFastfetchCpp ();
+      if (envInfo.empty ()) {
+        envInfo = "No environment information available.";
+      } else {
+        envInfo = "```txt\n" + envInfo + "\n```";
+      }
+      LOG_I_STREAM << "Environment information: " << envInfo << std::endl;
+      printStringToChannel (envInfo, event.command.channel_id, event, false);
+    }
   });
 }
 
@@ -336,7 +347,9 @@ void DiscordBot::loadOnReadyCommands () {
                                               "The terminal command to run", true)));
 
     bot_->global_command_create (dpp::slashcommand ("ping", "Ping pong!", bot_->me.id));
-    bot_->global_command_create (dpp::slashcommand ("bot", "About Bot++!", bot_->me.id));
+    bot_->global_command_create (dpp::slashcommand ("bot", "About Bot++", bot_->me.id));
+    bot_->global_command_create (
+        dpp::slashcommand ("env", "Display environment information", bot_->me.id));
     std::this_thread::sleep_for (std::chrono::seconds (5)); // delay to user readable debug output
     startPollingFetchFeed ();
     startPollingPrintFeed ();
@@ -489,7 +502,7 @@ int DiscordBot::getTokenFromFile (std::string& token) {
 }
 
 std::string DiscordBot::getLinuxFastfetchCpp () {
-  constexpr size_t bufferSize = 2000;
+  constexpr size_t bufferSize = DISCORD_MAX_MSG_LEN;
   std::stringstream result;
   std::unique_ptr<FILE, decltype (&pclose)> pipe (
       popen ("fastfetch -c archey.jsonc --pipe --logo none", "r"), pclose);
