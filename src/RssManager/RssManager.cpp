@@ -301,6 +301,7 @@ RSSFeed RssManager::parseRSS (const std::string& xmlData, bool embedded) {
       } else if (auto contentEl = item->FirstChildElement ("content")) {
         rssItem.description = contentEl->GetText () ? contentEl->GetText () : "";
       }
+      
       if (auto updatedEl = item->FirstChildElement ("updated")) {
         rssItem.pubDate = updatedEl->GetText () ? updatedEl->GetText () : "";
       } else if (auto publishedEl = item->FirstChildElement ("published")) {
@@ -336,14 +337,6 @@ RSSFeed RssManager::parseRSS (const std::string& xmlData, bool embedded) {
             rssItem.description = textNode->Value () ? textNode->Value () : "";
           }
         }
-        
-        // Clean up excessive whitespace and newlines
-        std::string& desc = rssItem.description;
-        // Replace multiple whitespace characters with single space
-        std::regex ws_re ("\\s+");
-        desc = std::regex_replace (desc, ws_re, " ");
-        // Trim leading/trailing whitespace
-        desc = std::regex_replace (desc, std::regex ("^\\s+|\\s+$"), "");
       }
       if (auto dateEl = item->FirstChildElement ("pubDate")) {
         rssItem.pubDate = dateEl->GetText () ? dateEl->GetText () : "";
@@ -353,6 +346,7 @@ RSSFeed RssManager::parseRSS (const std::string& xmlData, bool embedded) {
     if (rssItem.title.empty () || rssItem.link.empty ())
       continue;
 
+    // Generate hash from original, unprocessed data
     rssItem.generateHash ();
 
     // Skip if already seen
@@ -360,6 +354,16 @@ RSSFeed RssManager::parseRSS (const std::string& xmlData, bool embedded) {
       // LOG_D_STREAM << "Skipping duplicate item: " << rssItem.title << std::endl;
       duplicateItems++;
       continue;
+    }
+
+    // Clean up description for display AFTER hash generation (both RSS and Atom)
+    if (!rssItem.description.empty ()) {
+      std::string& desc = rssItem.description;
+      // Replace multiple whitespace characters with single space
+      std::regex ws_re ("\\s+");
+      desc = std::regex_replace (desc, ws_re, " ");
+      // Trim leading/trailing whitespace
+      desc = std::regex_replace (desc, std::regex ("^\\s+|\\s+$"), "");
     }
 
     feed.addItem (rssItem);
