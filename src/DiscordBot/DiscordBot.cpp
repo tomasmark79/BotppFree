@@ -30,11 +30,10 @@ const std::string botCommandsHelp = R"(
 `/addsource` - add RSS source [RSS 1.0, 2.0, Atom]
 `/addsource url:https://www.root.cz/rss/clanky/ embedded:true`
 `/runterminalcommand` `fortune` `df -h` `free -h` `fastfetch` `cat /etc/os-release`
-
 )";
 
 const std::string botDescription
-  = R"(Bot is written in C++ using the [DotNameCpp](https://github.com/tomasmark79/DotNameCppFree) project template and utilizes the [DPP](https://github.com/brainboxdotcc/DPP) library for Discord API access.)";
+  = R"(written in C++ using the [DotNameCpp](https://github.com/tomasmark79/DotNameCppFree) project template and utilizes the [DPP](https://github.com/brainboxdotcc/DPP) library for Discord API access.)";
 
 DiscordBot::DiscordBot () {
   rss.initialize ();
