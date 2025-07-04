@@ -21,21 +21,20 @@ constexpr size_t DISCORD_MAX_MSG_LEN = 2000; // (as per Discord API docs)
 const dpp::snowflake channelRss = 1375852042790244352;
 RssManager rss;
 
-std::string botCommandsHelp = R"(
-`/bot` - informace o botu
-`/queue` - položky ve frontě
-`/refetch` - získat feeds z webu
-`/getfeednow` - tisknout feed právě teď
-`/listsources` - tisknout seznam zdrojů
-`/addsource` - přidat zdroj [rss 1.0, 2.0, Atom]
+const std::string botCommandsHelp = R"(
+`/bot` - display this information
+`/queue` - number of feeds in queue
+`/refetch` - fetch new feeds from web
+`/getfeednow` - print feed right now
+`/listsources` - list RSS sources
+`/addsource` - add RSS source [RSS 1.0, 2.0, Atom]
 `/addsource url:https://www.root.cz/rss/clanky/ embedded:true`
-`/runterminalcommand command:fortune`
-`command:fortune`
-`command:df -h`
-`command:free -h`
-`command:fastfetch`
-`command:cat /etc/os-release`
+`/runterminalcommand` `fortune` `df -h` `free -h` `fastfetch` `cat /etc/os-release`
+
 )";
+
+const std::string botDescription
+  = R"(Bot is written in C++ using the [DotNameCpp](https://github.com/tomasmark79/DotNameCppFree) project template and utilizes the [DPP](https://github.com/brainboxdotcc/DPP) library for Discord API access.)";
 
 DiscordBot::DiscordBot () {
   rss.initialize ();
@@ -282,22 +281,22 @@ void DiscordBot::loadOnSlashCommands () {
     if (event.command.get_command_name () == "bot") {
       dpp::embed embed
           = dpp::embed ()
-                .set_color (dpp::colors::sti_blue)
-                .set_title ("🐧 TuX++ "
-                            + std::string (IBOT_VERSION + std::string ("\n📚 ") + DPP_VERSION_TEXT))
-                .set_url ("https://github.com/tomasmark79/BotppFree")
-                .set_author ("D🌀tName (c) 2025", "https://digitalspace.name",
+                .set_author ("With 🩵 by D🌀tName (c) 2025", "https://digitalspace.name",
                              "https://digitalspace.name/avatar/avatarpix.png")
-                .set_description (this->getLinuxFastfetchCpp ().substr (0, 8192 - 2) + "\n")
+                .set_color (dpp::colors::sti_blue)
+                .set_title ("BotppFree")
+                .set_url ("https://github.com/tomasmark79/BotppFree")
+                .set_description (botDescription + "\n")
                 .set_thumbnail ("https://digitalspace.name/avatar/Linux-Logo-1996-present.png")
-                .add_field ("/bot", botCommandsHelp, true)
-                //.add_field ("🩵🩵", "🩵🩵", true)
-                //.add_field ("🩵🩵", "🩵🩵", true)
-                .set_image ("https://digitalspace.name/avatar/tuxik.png")
-                .set_footer (dpp::embed_footer ()
-                                 .set_text ("Ve spolupráci s Delirium")
-                                 .set_icon ("https://digitalspace.name/avatar/Delirium.png"))
-                .set_timestamp (time (0));
+                .add_field ("commands:", botCommandsHelp, true)
+                .add_field ("build info:",
+                            "version " + std::string (IBOT_VERSION) + "\nDPP version "
+                                + DPP_VERSION_TEXT + "\nC++ version "
+                                + std::to_string (__cplusplus),
+                            false)
+                .add_field ("credits:", "[Delirium](https://robctl.dev/) for bot hosting", false)
+                .set_image ("https://digitalspace.name/avatar/tuxik.png");
+
       dpp::message msg (event.command.channel_id, embed);
       event.reply (msg);
     }
