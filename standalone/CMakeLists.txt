@@ -23,7 +23,7 @@ option(ENABLE_GTESTS "Build and run unit tests" ON)
 
 if(ENABLE_CCACHE)
     set(CMAKE_C_COMPILER_LAUNCHER ccache)
-    set(CMAKE_CXX_COMPILER_LAUNCHER ccache)3
+    set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
 endif()
 include(../cmake/tmplt-runtime.cmake)
 include(../cmake/tmplt-sanitizer.cmake)
