@@ -24,68 +24,120 @@ class DotNameCppRecipe(ConanFile):
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
 
+    def imports(self):
+        self.copy("license*", dst="licenses", folder=True, ignore_case=True)
+
     def generate(self): 
         tc = CMakeToolchain(self)
-        self.update_cmake_presets("CMakePresets.json")
+        tc.variables["CMAKE_BUILD_TYPE"] = str(self.settings.build_type)
         tc.generate()
-        
+
+        self.dotnameintegrated_update_cmake_presets()
+        self.dotnameintegrated_patch_remove_stdcpp_from_system_libs()        
+
     # Consuming recipe
     def configure(self):
         self.options["*"].shared = False # this replaced shared flag from SolutionController.py and works
 
     def requirements(self):
-        self.requires("fmt/[~11.1]") # required by cpm package
+        # self.requires("gtest/1.16.0")           # Google Test (if CPM not used)
+        self.requires("fmt/[11.2.0]") # required by cpm package
         self.requires("zlib/[~1.3]")
         self.requires("nlohmann_json/[~3.11]")
         self.requires("opus/1.5.2")
         self.requires("openssl/3.4.1")
         self.requires("libcurl/8.12.1")
         self.requires("tinyxml2/11.0.0")
-        # self.requires("gtest/1.16.0") # if cpm not used
-        # self.requires("yaml-cpp/0.8.0")
+        
+    # def build_requirements(self):
+    #     self.tool_requires("cmake/[>3.14]")
 
-    def build_requirements(self):
-        self.tool_requires("cmake/[>3.14]")
 
-    def imports(self):
-        self.copy("license*", dst="licenses", folder=True, ignore_case=True)
 
-    # Dynamic change of names of CMakePresets.json - avoid name conflicts
-    def update_cmake_presets(self, preset_file):
-        if os.path.exists(preset_file):
+    # ---------------------------------------------------------------------
+    # Utility Functions - no need to change
+    # ---------------------------------------------------------------------
+
+    def dotnameintegrated_update_cmake_presets(self):
+        """Dynamic change of names in CMakePresets.json to avoid name conflicts"""
+        preset_file = "CMakePresets.json"
+        if not os.path.exists(preset_file):
+            return
+            
+        try:
             with open(preset_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            build_suffix = f"{self.settings.arch}-{uuid.uuid4().hex[:8]}"
+                
+            preset_name = (f"{str(self.settings.build_type).lower()}-"
+                          f"{str(self.settings.os).lower()}-"
+                          f"{self.settings.arch}-"
+                          f"{self.settings.compiler}-"
+                          f"{self.settings.compiler.version}")
+            
+            # Collect old names from configurePresets for mapping
             name_mapping = {}
             for preset in data.get("configurePresets", []):
                 old_name = preset["name"]
-                new_name = f"{old_name}-{build_suffix}"
-                preset["name"] = new_name
-                preset["displayName"] = f"{preset['displayName']} ({build_suffix})"
-                name_mapping[old_name] = new_name  # Uložení pro reference
-            for preset in data.get("buildPresets", []):
-                if preset["configurePreset"] in name_mapping:
-                    preset["name"] = name_mapping[preset["configurePreset"]]
-                    preset["configurePreset"] = name_mapping[preset["configurePreset"]]
-            for preset in data.get("testPresets", []):
-                if preset["configurePreset"] in name_mapping:
-                    preset["name"] = name_mapping[preset["configurePreset"]]
-                    preset["configurePreset"] = name_mapping[preset["configurePreset"]]
+                preset["name"] = preset["displayName"] = preset_name
+                name_mapping[old_name] = preset_name
+                
+            # Update buildPresets and testPresets in one pass
+            for preset_type in ["buildPresets", "testPresets"]:
+                for preset in data.get(preset_type, []):
+                    if preset.get("configurePreset") in name_mapping:
+                        preset["name"] = preset["configurePreset"] = preset_name
+                        
             with open(preset_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4)
+                
+        except (json.JSONDecodeError, IOError) as e:
+            self.output.warn(f"Failed to update CMake presets: {e}")
 
-    # def system_requirements(self):
-        # dnf = package_manager.Dnf(self)
-        # dnf.install("SDL2-devel")
-        # apt = package_manager.Apt(self)
-        # apt.install(["libsdl2-dev"])
-        # yum = package_manager.Yum(self)
-        # yum.install("SDL2-devel")
-        # brew = package_manager.Brew(self)
-        # brew.install("sdl2")
-
-    # TO DO 
-    # # ----------------------------------------------------------    
-    # # Creating basic library recipe
-    # # Not recomended due complexity of this project template
-    # # ----------------------------------------------------------
+    def dotnameintegrated_patch_remove_stdcpp_from_system_libs(self):
+        """Remove stdc++ from SYSTEM_LIBS in generated Conan CMake files"""
+        import glob
+        import re
+        
+        # Find all *-data.cmake files for all platforms and architectures
+        generators_path = self.generators_folder or "."
+        patterns = [
+            "*-data.cmake",          # General pattern for all files
+            "*-*-*-data.cmake",      # Pattern for specific platforms (name-os-arch-data.cmake)
+        ]
+        
+        cmake_files = []
+        for pattern in patterns:
+            cmake_files.extend(glob.glob(os.path.join(generators_path, pattern)))
+            
+        # Remove duplicates
+        cmake_files = list(set(cmake_files))
+        
+        if not cmake_files:
+            return
+            
+        # Compile regex pattern once for better performance
+        system_libs_pattern = re.compile(
+            r'(set\([^_]*_SYSTEM_LIBS(?:_[A-Z]+)?\s+[^)]*?)stdc\+\+([^)]*\))', 
+            re.MULTILINE
+        )
+        
+        patched_count = 0
+        for cmake_file in cmake_files:
+            try:
+                with open(cmake_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                # Replace all occurrences of stdc++ in SYSTEM_LIBS
+                modified_content = system_libs_pattern.sub(r'\1\2', content)
+                
+                if modified_content != content:
+                    with open(cmake_file, 'w', encoding='utf-8') as f:
+                        f.write(modified_content)
+                    self.output.info(f"Patched {cmake_file} - removed stdc++ from SYSTEM_LIBS")
+                    patched_count += 1
+                    
+            except (IOError, OSError) as e:
+                self.output.warn(f"Could not patch {cmake_file}: {e}")
+        
+        if patched_count > 0:
+            self.output.info(f"Successfully patched {patched_count} CMake files")

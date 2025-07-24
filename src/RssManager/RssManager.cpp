@@ -184,31 +184,34 @@ std::string RssManager::downloadFeed (const std::string& url) {
     curl_easy_setopt (curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt (curl, CURLOPT_SSL_VERIFYPEER, 0L);
     curl_easy_setopt (curl, CURLOPT_SSL_VERIFYHOST, 0L);
-    
+
     // Set User-Agent - many sites require this
-    curl_easy_setopt (curl, CURLOPT_USERAGENT, "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-    
+    curl_easy_setopt (curl, CURLOPT_USERAGENT,
+                      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                      "Chrome/120.0.0.0 Safari/537.36");
+
     // Set timeout options
     curl_easy_setopt (curl, CURLOPT_TIMEOUT, 30L);
     curl_easy_setopt (curl, CURLOPT_CONNECTTIMEOUT, 10L);
-    
+
     // Accept any encoding
     curl_easy_setopt (curl, CURLOPT_ENCODING, "");
-    
+
     // Set HTTP headers
-    struct curl_slist *headers = nullptr;
-    headers = curl_slist_append(headers, "Accept: application/rss+xml, application/xml, text/xml");
-    headers = curl_slist_append(headers, "Cache-Control: no-cache");
+    struct curl_slist* headers = nullptr;
+    headers = curl_slist_append (headers, "Accept: application/rss+xml, application/xml, text/xml");
+    headers = curl_slist_append (headers, "Cache-Control: no-cache");
     curl_easy_setopt (curl, CURLOPT_HTTPHEADER, headers);
 
     CURLcode res = curl_easy_perform (curl);
-    
+
     // Clean up headers
-    curl_slist_free_all(headers);
+    curl_slist_free_all (headers);
     curl_easy_cleanup (curl);
 
     if (res != CURLE_OK) {
-      LOG_E_STREAM << "CURL error for URL '" << url << "': " << curl_easy_strerror (res) << std::endl;
+      LOG_E_STREAM << "CURL error for URL '" << url << "': " << curl_easy_strerror (res)
+                   << std::endl;
       return "";
     }
   } catch (const std::exception& e) {
@@ -301,7 +304,7 @@ RSSFeed RssManager::parseRSS (const std::string& xmlData, bool embedded) {
       } else if (auto contentEl = item->FirstChildElement ("content")) {
         rssItem.description = contentEl->GetText () ? contentEl->GetText () : "";
       }
-      
+
       if (auto updatedEl = item->FirstChildElement ("updated")) {
         rssItem.pubDate = updatedEl->GetText () ? updatedEl->GetText () : "";
       } else if (auto publishedEl = item->FirstChildElement ("published")) {

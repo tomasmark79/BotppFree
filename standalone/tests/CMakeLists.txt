@@ -35,6 +35,9 @@ add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
 # ==============================================================================
 # Set target properties
 # ==============================================================================
+# ==============================================================================
+include(../../cmake/tmplt-debug.cmake)
+apply_debug_info_control(${TEST_NAME})
 
 # emscripten handler
 include(../../cmake/tmplt-emscripten.cmake)

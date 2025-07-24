@@ -2,44 +2,37 @@ cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
 # MIT License Copyright (c) 2024-2025 Tomáš Mark
 
-# +-+-+-+-+-+-+-+-+-+-+
-# |s|t|a|n|d|a|l|o|n|e|
-# +-+-+-+-+-+-+-+-+-+-+
+# +-+-+-+-+-+-+-+-+-+-+-+-+
+# STANDALONE
+# +-+-+-+-+-+-+-+-+-+-+-+-+
 
-set(AVX1_EXITCODE
-    0
-    CACHE STRING "AVX1 test exit code")
-set(AVX2_EXITCODE
-    0
-    CACHE STRING "AVX2 test exit code")
+cmake_policy(SET CMP0048 NEW)
+cmake_policy(SET CMP0076 NEW)
+cmake_policy(SET CMP0091 NEW)
 
-cmake_policy(SET CMP0048 NEW) # project() command manages VERSION variables
-cmake_policy(SET CMP0076 NEW) # target_sources() command creates usage requirements
-cmake_policy(SET CMP0091 NEW) # MSVC runtime library flags are selected by an abstraction
+option(ENABLE_CCACHE "Use ccache compiler cache" ON)
+option(BUILD_SHARED_LIBS "Build shared (.so) libraries" OFF)
+option(USE_STATIC_RUNTIME "Link C++ runtime statically" OFF)
+option(SANITIZE_ADDRESS "Enable address sanitizer" OFF)
+option(SANITIZE_UNDEFINED "Enable undefined behavior sanitizer" OFF)
+option(SANITIZE_THREAD "Enable thread sanitizer" OFF)
+option(SANITIZE_MEMORY "Enable memory sanitizer" OFF)
+option(ENABLE_HARDENING "Enable security hardening" OFF)
+option(ENABLE_IPO "Enable link-time optimization" OFF)
+option(ENABLE_GTESTS "Build and run unit tests" ON)
 
-# === shared libraries
-option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
-# === runtime
+if(ENABLE_CCACHE)
+    set(CMAKE_C_COMPILER_LAUNCHER ccache)
+    set(CMAKE_CXX_COMPILER_LAUNCHER ccache)3
+endif()
 include(../cmake/tmplt-runtime.cmake)
-option(USE_STATIC_RUNTIME "Link against static runtime libraries" OFF)
-# === sanitizer
 include(../cmake/tmplt-sanitizer.cmake)
-option(SANITIZE_ADDRESS "Enable Address sanitizer" OFF)
-option(SANITIZE_UNDEFINED "Enable Undefined Behavior sanitizer" OFF)
-option(SANITIZE_THREAD "Enable Thread sanitizer" OFF)
-option(SANITIZE_MEMORY "Enable Memory sanitizer" OFF)
-# === hardening
 include(../cmake/tmplt-hardening.cmake)
-option(ENABLE_HARDENING "Enable security hardening options" OFF)
-# === ipo
 include(../cmake/tmplt-ipo.cmake)
-option(ENABLE_IPO "Enable Interprocedural Optimization" OFF)
-# === ccache
-option(ENABLE_CCACHE "Enable ccache" ON)
+include(../cmake/tmplt-debug.cmake)
+
 # === linting C/C++ code
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-# === gtest
-option(ENABLE_GTESTS "Enable gtests" ON)
 
 # ==============================================================================
 # Project attributes
@@ -104,6 +97,8 @@ add_executable(${STANDALONE_NAME} ${sources})
 
 apply_hardening(${STANDALONE_NAME})
 apply_sanitizers(${STANDALONE_NAME})
+apply_static_runtime(${STANDALONE_NAME})
+apply_debug_info_control(${STANDALONE_NAME})
 
 # ==============================================================================
 # Set linking
