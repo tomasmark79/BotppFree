@@ -98,7 +98,7 @@ int printAssets (const std::filesystem::path& assetsPath) {
 int runApp (int argc, const char* argv[]) {
 
   LOG.noHeader (true);
-  LOG.setSkipLine (false);
+  LOG.setAddNewLine (true);
   LOG_I_STREAM << "Starting " << AppContext::standaloneName << " ..." << std::endl;
 
 #ifdef EMSCRIPTEN

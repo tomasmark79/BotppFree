@@ -17,10 +17,7 @@ The bot is currently running in test mode on the largest Discord Server Linux CZ
 - RSS source configuration in external file and during program runtime
  
 ### ToDo
-
-  - external commands for fetch feed are disabled until further notice
-
- ---
+ 
 
 BotppFree is proudly built with **[D🌀tName C++ Template](https://github.com/tomasmark79/DotNameCppFree)**.
 
@@ -31,4 +28,4 @@ Copyright (c) 2024-2025 Tomáš Mark
 
 ## Disclaimer
 
-This template is provided "as is," without any guarantees regarding its functionality or suitability for any purpose.
+This template is provided "as is," without any guarantees regarding its functionality or suitability for any purpose.python SolutionUpgrader.py --update-file SolutionUpgrader.py

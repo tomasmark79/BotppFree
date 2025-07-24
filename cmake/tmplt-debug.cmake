@@ -5,6 +5,10 @@ function(apply_debug_info_control target)
     # Debug and RelWithDebInfo builds should always keep debug info
     if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
         message(STATUS "${CMAKE_BUILD_TYPE} build - keeping debug info for ${target}")
+        # For Debug builds, ensure NDEBUG is NOT defined to enable debug logging
+        if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+            target_compile_definitions(${target} PRIVATE DEBUG)
+        endif()
         return()
     endif()
 

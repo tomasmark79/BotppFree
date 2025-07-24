@@ -53,7 +53,7 @@ function(apply_hardening target)
 
         target_compile_options(${target} PRIVATE ${HARDENING_FLAGS})
         
-        if(NOT APPLE)
+        if(NOT APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
             target_link_options(${target} PRIVATE 
                 -Wl,-z,relro # Relocation read-only
                 -Wl,-z,now # No lazy binding

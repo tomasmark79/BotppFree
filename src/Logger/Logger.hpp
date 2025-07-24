@@ -64,9 +64,8 @@ class Logger {
 
 private:
   std::mutex logMutex_;
-  std::ostringstream messageStream_;
   std::ofstream logFile_;
-  bool isSkipLine_ = false;
+  bool addNewLine_ = true;
 
 protected:
   Logger () = default;
@@ -88,19 +87,23 @@ public:
   }
 
 public:
-  static void setSkipLine (bool isSkipLine) {
-    getInstance ().isSkipLine_ = isSkipLine;
+  static void setAddNewLine (bool addNewLine) {
+    getInstance ().addNewLine_ = addNewLine;
   }
 
-  static bool isSkipLine () {
-    return getInstance ().isSkipLine_;
+  static bool isAddNewLine () {
+    return getInstance ().addNewLine_;
   }
 
 public:
   enum class Level { LOG_DEBUG, LOG_INFO, LOG_WARNING, LOG_ERROR, LOG_CRITICAL };
 
 private:
-  Level currentLevel_ = Level::LOG_INFO;
+#ifdef DEBUG
+  Level currentLevel_ = Level::LOG_DEBUG;  // Automatically enable debug logging in debug builds
+#else
+  Level currentLevel_ = Level::LOG_INFO;   // Default to info level in release builds
+#endif
 
 public:
   void debug (const std::string& message, const std::string& caller = "") {
@@ -124,6 +127,11 @@ public:
   }
 
   void log (Level level, const std::string& message, const std::string& caller = "") {
+    // Filtrování podle úrovně logování
+    if (level < currentLevel_) {
+      return;
+    }
+    
     std::lock_guard<std::mutex> lock (logMutex_);
     auto now = std::chrono::system_clock::now ();
     auto now_time = std::chrono::system_clock::to_time_t (now);
@@ -150,8 +158,19 @@ public:
   template <typename... Args>
   void logFmtMessage (Level level, const std::string& format, const std::string& caller,
                       Args&&... args) {
-    std::string message = fmt::format (format, std::forward<Args> (args)...);
+    std::string message = fmt::vformat (format, fmt::make_format_args(args...));
     log (level, message, caller);
+  }
+
+public:
+  // Metody pro nastavení a získání úrovně logování
+  void setLevel (Level level) {
+    std::lock_guard<std::mutex> lock (logMutex_);
+    currentLevel_ = level;
+  }
+
+  Level getLevel () const {
+    return currentLevel_;
   }
 
 public:
@@ -257,9 +276,17 @@ private:
 
   void logToStream (std::ostream& stream, Level level, const std::string& message,
                     const std::string& caller, const std::tm& now_tm) {
+    // Nejdříve nastavit barvu
+    setConsoleColor (level);
+    
+    // Pak vypsat header a zprávu
     stream << buildHeader (now_tm, caller, level) << message;
+    
+    // Resetovat barvu
     resetConsoleColor ();
-    if (isSkipLine_) {
+    
+    // Přidat nový řádek pokud je požadován
+    if (addNewLine_) {
       stream << std::endl;
     }
   }
