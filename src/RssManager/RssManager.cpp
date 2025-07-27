@@ -13,8 +13,8 @@ size_t WriteCallback (void* contents, size_t size, size_t nmemb, void* userp) {
 
 // RSSItem Struct Implementation
 RSSItem::RSSItem (const std::string& t, const std::string& l, const std::string& d,
-                  const std::string& date = "", bool e = false)
-    : title (t), link (l), description (d), pubDate (date), embedded (e) {
+                  const std::string& date = "", bool e = false, uint64_t dChId = 0)
+    : title (t), link (l), description (d), pubDate (date), embedded (e), discordChannelId (dChId) {
   generateHash ();
 }
 void RSSItem::generateHash () {
@@ -82,7 +82,7 @@ int RssManager::initialize () {
 int RssManager::addUrl (const std::string& url, bool embedded) {
   // Check if URL already exists
   for (const auto& existingUrl : urls_) {
-    if (existingUrl.url_ == url) {
+    if (existingUrl.url == url) {
       LOG_W_STREAM << "URL already exists: " << url << std::endl;
       return -1; // URL already exists
     }
@@ -94,7 +94,7 @@ int RssManager::addUrl (const std::string& url, bool embedded) {
 int RssManager::saveUrls () {
   nlohmann::json jsonData = nlohmann::json::array ();
   for (const auto& url : urls_) {
-    jsonData.push_back ({ { "url", url.url_ }, { "embedded", url.embedded_ } });
+    jsonData.push_back ({ { "url", url.url }, { "embedded", url.embedded } });
   }
   std::ofstream file (getUrlsPath ());
   if (!file.is_open ())
@@ -107,7 +107,7 @@ std::string RssManager::getSourcesAsList () {
   std::string sourcesList;
   sourcesList = "```txt\n**Available RSS Sources:**\n";
   for (const auto& url : urls_) {
-    sourcesList += "- " + url.url_ + (url.embedded_ ? " (embedded)" : " (non-embedded)") + "\n";
+    sourcesList += "- " + url.url + (url.embedded ? " (embedded)" : " (non-embedded)") + "\n";
   }
   sourcesList += "```";
   return sourcesList.empty () ? "No RSS sources available." : sourcesList;
@@ -131,7 +131,7 @@ int RssManager::loadUrls () {
       urls_.emplace_back (url, embedded, discordChannelId);
     } else if (item.is_string ()) {
       // Backwards compatibility - treat strings as non-embedded
-      urls_.emplace_back (item.get<std::string> (), false);
+      urls_.emplace_back (item.get<std::string> (), false, 0);
     }
   }
 
@@ -145,7 +145,17 @@ int RssManager::loadSeenHashes () {
     return -1;
 
   nlohmann::json jsonData;
-  file >> jsonData;
+  try {
+    file >> jsonData;
+  } catch (const std::exception& e) {
+    LOG_E_STREAM << "Hashes file corrupted: " << e.what () << ". Creating new file." << std::endl;
+    seenHashes_.clear ();
+    std::ofstream outFile (getHashesPath ());
+    if (!outFile.is_open ())
+      return -1;
+    outFile << nlohmann::json::array ().dump (4);
+    return 0;
+  }
 
   seenHashes_.clear ();
   for (const auto& hash : jsonData) {
@@ -417,7 +427,7 @@ int RssManager::fetchAllFeeds () {
   int totalItems = 0;
 
   for (const auto& rssUrl : urls_) {
-    int items = fetchFeed (rssUrl.url_, rssUrl.embedded_);
+    int items = fetchFeed (rssUrl.url, rssUrl.embedded);
     if (items > 0) {
       totalItems += items;
     }

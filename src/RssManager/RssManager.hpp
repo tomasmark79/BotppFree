@@ -12,13 +12,13 @@
 #include <filesystem>
 
 struct RSSUrl {
-  std::string url_;
-  bool embedded_;
-  uint64_t discordChannelId_;
-  RSSUrl () : url_ (""), embedded_ (false), discordChannelId_ (0) {
+  std::string url;
+  bool embedded;
+  uint64_t discordChannelId;
+  RSSUrl () : url (""), embedded (false), discordChannelId (0) {
   }
   RSSUrl (const std::string& u, bool e = false, uint64_t d = 0)
-      : url_ (u), embedded_ (e), discordChannelId_ (d) {
+      : url (u), embedded (e), discordChannelId (d) {
   }
 };
 
@@ -34,7 +34,7 @@ struct RSSItem {
   RSSItem () : embedded (false), discordChannelId (0) {
   }
   RSSItem (const std::string& t, const std::string& l, const std::string& d,
-           const std::string& date, bool e);
+           const std::string& date, bool e, uint64_t dChId);
   void generateHash ();
   std::string toMarkdownLink () const;
 };
