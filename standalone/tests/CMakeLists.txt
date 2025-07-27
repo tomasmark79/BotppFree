@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
-
+add_compile_options(-fdiagnostics-color=always)
 # MIT License Copyright (c) 2024-2025 Tomáš Mark
 
 # +-+-+-+-+-+-+-+-+-+
