@@ -6,6 +6,8 @@
 #include <thread>
 #include <atomic>
 
+#define IS_TOMAS_MARK_BOT
+
 #define PUBLIC_RELEASED_DISCORD_BOT
 
 const int START_SLOW_MODE_AT_HOUR = 22;           // Start slow mode at 22:00
@@ -17,9 +19,18 @@ const int FEED_FETCH_INTERVAL = 60 * 60 * 2;      // 2 hours
 const std::string NO_ITEMS_IN_QUEUE = "No items in the RSS feed queue.";
 const std::string ALL_FEEDS_REFETCHED = "All RSS feeds have been refetched successfully.";
 constexpr size_t DISCORD_MAX_MSG_LEN = 2000; // (as per Discord API docs)
-#define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.bot++.key"
 
-constexpr dpp::snowflake channelRss = 1375852042790244352;
+#ifdef IS_TOMAS_MARK_BOT
+// DigitalSpace
+#define CREDITS "[DotName](https://digitalspace.name/) for bot hosting"
+#define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.botpp-supervisor.key"
+dpp::snowflake channelRss = 1398904149856223262;
+#else
+// Linux CZ/SK feed channel
+#define CREDITS "[Delirium](https://robctl.dev/) for bot hosting"
+#define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.bot++.key"
+dpp::snowflake channelRss = 1375852042790244352;
+#endif
 
 RssManager rss;
 
@@ -296,7 +307,7 @@ void DiscordBot::loadOnSlashCommands () {
                                 + DPP_VERSION_TEXT + "\nC++ version "
                                 + std::to_string (__cplusplus),
                             false)
-                .add_field ("credits:", "[Delirium](https://robctl.dev/) for bot hosting", false)
+                .add_field ("credits:", CREDITS, false)
                 .set_image ("https://digitalspace.name/avatar/tuxik.png");
 
       dpp::message msg (event.command.channel_id, embed);
