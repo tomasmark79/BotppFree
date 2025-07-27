@@ -82,7 +82,7 @@ int RssManager::initialize () {
 int RssManager::addUrl (const std::string& url, bool embedded) {
   // Check if URL already exists
   for (const auto& existingUrl : urls_) {
-    if (existingUrl.url == url) {
+    if (existingUrl.url_ == url) {
       LOG_W_STREAM << "URL already exists: " << url << std::endl;
       return -1; // URL already exists
     }
@@ -94,7 +94,7 @@ int RssManager::addUrl (const std::string& url, bool embedded) {
 int RssManager::saveUrls () {
   nlohmann::json jsonData = nlohmann::json::array ();
   for (const auto& url : urls_) {
-    jsonData.push_back ({ { "url", url.url }, { "embedded", url.embedded } });
+    jsonData.push_back ({ { "url", url.url_ }, { "embedded", url.embedded_ } });
   }
   std::ofstream file (getUrlsPath ());
   if (!file.is_open ())
@@ -107,7 +107,7 @@ std::string RssManager::getSourcesAsList () {
   std::string sourcesList;
   sourcesList = "```txt\n**Available RSS Sources:**\n";
   for (const auto& url : urls_) {
-    sourcesList += "- " + url.url + (url.embedded ? " (embedded)" : " (non-embedded)") + "\n";
+    sourcesList += "- " + url.url_ + (url.embedded_ ? " (embedded)" : " (non-embedded)") + "\n";
   }
   sourcesList += "```";
   return sourcesList.empty () ? "No RSS sources available." : sourcesList;
@@ -124,9 +124,11 @@ int RssManager::loadUrls () {
   urls_.clear ();
   for (const auto& item : jsonData) {
     if (item.is_object () && item.contains ("url")) {
+      uint64_t discordChannelId
+          = item.contains ("discordChannelId") ? item["discordChannelId"].get<uint64_t> () : 0;
       std::string url = item["url"].get<std::string> ();
       bool embedded = item.contains ("embedded") ? item["embedded"].get<bool> () : false;
-      urls_.emplace_back (url, embedded);
+      urls_.emplace_back (url, embedded, discordChannelId);
     } else if (item.is_string ()) {
       // Backwards compatibility - treat strings as non-embedded
       urls_.emplace_back (item.get<std::string> (), false);
@@ -415,7 +417,7 @@ int RssManager::fetchAllFeeds () {
   int totalItems = 0;
 
   for (const auto& rssUrl : urls_) {
-    int items = fetchFeed (rssUrl.url, rssUrl.embedded);
+    int items = fetchFeed (rssUrl.url_, rssUrl.embedded_);
     if (items > 0) {
       totalItems += items;
     }

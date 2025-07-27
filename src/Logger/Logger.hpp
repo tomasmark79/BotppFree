@@ -100,9 +100,9 @@ public:
 
 private:
 #ifdef DEBUG
-  Level currentLevel_ = Level::LOG_DEBUG;  // Automatically enable debug logging in debug builds
+  Level currentLevel_ = Level::LOG_DEBUG; // Automatically enable debug logging in debug builds
 #else
-  Level currentLevel_ = Level::LOG_INFO;   // Default to info level in release builds
+  Level currentLevel_ = Level::LOG_INFO; // Default to info level in release builds
 #endif
 
 public:
@@ -131,7 +131,7 @@ public:
     if (level < currentLevel_) {
       return;
     }
-    
+
     std::lock_guard<std::mutex> lock (logMutex_);
     auto now = std::chrono::system_clock::now ();
     auto now_time = std::chrono::system_clock::to_time_t (now);
@@ -158,7 +158,7 @@ public:
   template <typename... Args>
   void logFmtMessage (Level level, const std::string& format, const std::string& caller,
                       Args&&... args) {
-    std::string message = fmt::vformat (format, fmt::make_format_args(args...));
+    std::string message = fmt::vformat (format, fmt::make_format_args (args...));
     log (level, message, caller);
   }
 
@@ -278,13 +278,13 @@ private:
                     const std::string& caller, const std::tm& now_tm) {
     // Nejdříve nastavit barvu
     setConsoleColor (level);
-    
+
     // Pak vypsat header a zprávu
     stream << buildHeader (now_tm, caller, level) << message;
-    
+
     // Resetovat barvu
     resetConsoleColor ();
-    
+
     // Přidat nový řádek pokud je požadován
     if (addNewLine_) {
       stream << std::endl;

@@ -1,62 +1,135 @@
 [
     {
+        "discordChannelId": 1398904149856223262,
         "embedded": true,
         "url": "https://www.root.cz/rss/clanky/"
     },
     {
+        "discordChannelId": 1398904149856223262,
         "embedded": true,
         "url": "https://www.lupa.cz/rss/clanky/"
     },
     {
+        "discordChannelId": 1398904149856223262,
         "embedded": true,
         "url": "https://www.root.cz/rss/zpravicky/"
     },
     {
+        "discordChannelId": 1398904149856223262,
         "embedded": false,
         "url": "https://www.abclinuxu.cz/auto/zpravicky.rss"
     },
     {
+        "discordChannelId": 1398904149856223262,
         "embedded": false,
         "url": "https://www.abclinuxu.cz/auto/abc.rss"
     },
     {
+        "discordChannelId": 1398904149856223262,
         "embedded": true,
         "url": "https://9to5linux.com/feed/atom"
     },
     {
+        "discordChannelId": 1398904149856223262,
         "embedded": true,
         "url": "https://www.linuxtoday.com/backend/biglt.rss"
     },
     {
+        "discordChannelId": 1398904149856223262,
         "embedded": true,
         "url": "https://news.itsfoss.com/latest/rss"
     },
     {
+        "discordChannelId": 1398904149856223262,
         "embedded": true,
         "url": "https://www.phoronix.com/rss.php"
     },
     {
+        "discordChannelId": 1398904149856223262,
         "embedded": true,
         "url": "https://archlinux.org/feeds/news/"
     },
     {
+        "discordChannelId": 1398904149856223262,
         "embedded": true,
         "url": "https://linuxhandbook.com/rss/"
     },
     {
+        "discordChannelId": 1398904149856223262,
         "embedded": true,
         "url": "https://www.computertrends.cz/rss/clanky"
     },
     {
+        "discordChannelId": 1398904149856223262,
         "embedded": true,
         "url": "https://www.linuxexpres.cz/rss/clanky"
     },
     {
+        "discordChannelId": 1398904149856223262,
         "embedded": true,
         "url": "https://www.linuxexpres.cz/rss/novinky"
     },
     {
+        "discordChannelId": 1398904149856223262,
         "embedded": true,
         "url": "https://www.xda-developers.com/feed/tag/rss"
+    },
+    {
+        "discordChannelId": 1398904149856223262,
+        "embedded": true,
+        "url": "https://www.debian-linux.cz/feed"
+    },
+    {
+        "discordChannelId": 1398904149856223262,
+        "embedded": true,
+        "url": "https://servis.idnes.cz/rss.aspx?c=bonusweb"
+    }
+    ,
+    {
+        "discordChannelId": 1398904149856223262,
+        "embedded": true,
+        "url": "https://pctuning.cz/rss/all"
+    }
+    ,
+    {
+        "discordChannelId": 1398904149856223262,
+        "embedded": true,
+        "url": "https://www.samuraj-cz.com/rss/"
+    }
+    ,
+    {
+        "discordChannelId": 1398904149856223262,
+        "embedded": true,
+        "url": "https://zdrojak.cz/feed/"
+    }
+    ,
+    {
+        "discordChannelId": 1398904149856223262,
+        "embedded": true,
+        "url": "https://www.itnetwork.cz/api/System-Event/rss"
+    }
+    ,
+    {
+        "discordChannelId": 1398916197843734528,
+        "embedded": true,
+        "url": "https://www.aktualne.cz/rss/"
+    }
+    ,
+    {
+        "discordChannelId": 1398916197843734528,
+        "embedded": true,
+        "url": "https://www.aktualne.cz/mrss/"
+    }
+    ,
+    {
+        "discordChannelId": 1398916197843734528,
+        "embedded": true,
+        "url": "https://servis.idnes.cz/rss.aspx?c=zpravodaj"
+    }
+    ,
+    {
+        "discordChannelId": 1398916197843734528,
+        "embedded": true,
+        "url": "https://ct24.ceskatelevize.cz/rss/tema/vyber-redakce-84313"
     }
 ]

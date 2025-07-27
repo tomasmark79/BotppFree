@@ -9,6 +9,7 @@ cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 cmake_policy(SET CMP0048 NEW)
 cmake_policy(SET CMP0076 NEW)
 cmake_policy(SET CMP0091 NEW)
+add_compile_options(-fdiagnostics-color=always)
 
 option(ENABLE_CCACHE "Use ccache compiler cache" ON)
 option(BUILD_SHARED_LIBS "Build shared (.so) libraries" OFF)

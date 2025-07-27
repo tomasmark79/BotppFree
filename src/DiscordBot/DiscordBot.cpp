@@ -21,15 +21,15 @@ const std::string ALL_FEEDS_REFETCHED = "All RSS feeds have been refetched succe
 constexpr size_t DISCORD_MAX_MSG_LEN = 2000; // (as per Discord API docs)
 
 #ifdef IS_TOMAS_MARK_BOT
-// DigitalSpace
-#define CREDITS "[DotName](https://digitalspace.name/) for bot hosting"
-#define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.botpp-supervisor.key"
-dpp::snowflake channelRss = 1398904149856223262;
+  // DigitalSpace
+  #define CREDITS "[DotName](https://digitalspace.name/) for bot hosting"
+  #define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.botpp-supervisor.key"
+constexpr dpp::snowflake defaultChannelRss = 1398904149856223262;
 #else
-// Linux CZ/SK feed channel
-#define CREDITS "[Delirium](https://robctl.dev/) for bot hosting"
-#define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.bot++.key"
-dpp::snowflake channelRss = 1375852042790244352;
+  // Linux CZ/SK feed channel
+  #define CREDITS "[Delirium](https://robctl.dev/) for bot hosting"
+  #define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.bot++.key"
+constexpr dpp::snowflake defaultChannelRss = 1375852042790244352;
 #endif
 
 RssManager rss;
@@ -70,7 +70,7 @@ bool DiscordBot::startPollingPrintFeed () {
       try {
         RSSItem item = rss.getRandomItem ();
         if (!item.title.empty ()) {
-          printStringToChannel (item.toMarkdownLink (), channelRss, {}, item.embedded);
+          printStringToChannel (item.toMarkdownLink (), defaultChannelRss, {}, item.embedded);
         } else {
           LOG_W_STREAM << "No items found in the feed queue." << std::endl;
         }
@@ -224,7 +224,7 @@ void DiscordBot::loadOnSlashCommands () {
       try {
         RSSItem item = rss.getRandomItem ();
         if (!item.title.empty ()) {
-          printStringToChannel (item.toMarkdownLink (), channelRss, event, item.embedded);
+          printStringToChannel (item.toMarkdownLink (), defaultChannelRss, event, item.embedded);
         } else {
           LOG_W_STREAM << NO_ITEMS_IN_QUEUE << std::endl;
           event.reply (NO_ITEMS_IN_QUEUE);

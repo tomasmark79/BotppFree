@@ -12,11 +12,13 @@
 #include <filesystem>
 
 struct RSSUrl {
-  std::string url;
-  bool embedded;
-  RSSUrl () : url (""), embedded (false) {
+  std::string url_;
+  bool embedded_;
+  uint64_t discordChannelId_;
+  RSSUrl () : url_ (""), embedded_ (false), discordChannelId_ (0) {
   }
-  RSSUrl (const std::string& u, bool e = false) : url (u), embedded (e) {
+  RSSUrl (const std::string& u, bool e = false, uint64_t d = 0)
+      : url_ (u), embedded_ (e), discordChannelId_ (d) {
   }
 };
 
@@ -27,8 +29,9 @@ struct RSSItem {
   std::string pubDate;
   std::string hash;
   bool embedded; // Whether this item should use embedded format
+  uint64_t discordChannelId;
 
-  RSSItem () : embedded (false) {
+  RSSItem () : embedded (false), discordChannelId (0) {
   }
   RSSItem (const std::string& t, const std::string& l, const std::string& d,
            const std::string& date, bool e);
