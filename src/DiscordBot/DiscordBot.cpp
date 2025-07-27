@@ -14,6 +14,7 @@ const int START_SLOW_MODE_AT_HOUR = 22;           // Start slow mode at 22:00
 const int STOP_SLOW_MODE_AT_HOUR = 7;             // Stop slow mode at 07:00
 const int SLOW_MODE_POLLING_INTERVAL = 60 * 180;  // 180 minutes (3 hours)
 const int NORMAL_MODE_POLLING_INTERVAL = 60 * 23; // 23 minutes
+const int ULTRA_FAST_POLLING_INTERVAL = 30;       // 30 seconds
 const int FEED_FETCH_INTERVAL = 60 * 60 * 2;      // 2 hours
 
 const std::string NO_ITEMS_IN_QUEUE = "No items in the RSS feed queue.";
@@ -24,12 +25,12 @@ constexpr size_t DISCORD_MAX_MSG_LEN = 2000; // (as per Discord API docs)
   // DigitalSpace
   #define CREDITS "[DotName](https://digitalspace.name/) for bot hosting"
   #define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.botpp-supervisor.key"
-constexpr dpp::snowflake defaultChannelRss = 1398904149856223262;
+uint64_t defaultChannelRss = 1398904149856223262;
 #else
   // Linux CZ/SK feed channel
   #define CREDITS "[Delirium](https://robctl.dev/) for bot hosting"
   #define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.bot++.key"
-constexpr dpp::snowflake defaultChannelRss = 1375852042790244352;
+uint64_t defaultChannelRss = 1375852042790244352;
 #endif
 
 RssManager rss;
@@ -70,7 +71,11 @@ bool DiscordBot::startPollingPrintFeed () {
       try {
         RSSItem item = rss.getRandomItem ();
         if (!item.title.empty ()) {
-          printStringToChannel (item.toMarkdownLink (), defaultChannelRss, {}, item.embedded);
+          // Want answer in the channel received by rss, or default channel if not specified
+          printStringToChannel (item.toMarkdownLink (),
+                                item.discordChannelId > 0 ? item.discordChannelId
+                                                          : defaultChannelRss,
+                                {}, item.embedded);
         } else {
           LOG_W_STREAM << "No items found in the feed queue." << std::endl;
         }
@@ -84,12 +89,18 @@ bool DiscordBot::startPollingPrintFeed () {
       std::time_t now = std::time (nullptr);
       std::tm* localTime = std::localtime (&now);
 
+#ifndef PUBLIC_RELEASED_DISCORD_BOT
+      // In development mode, use ultra fast polling
+      printFeedInterval = ULTRA_FAST_POLLING_INTERVAL;
+#else
       if ((localTime->tm_hour >= START_SLOW_MODE_AT_HOUR)
           || (localTime->tm_hour < STOP_SLOW_MODE_AT_HOUR)) {
         printFeedInterval = SLOW_MODE_POLLING_INTERVAL;
       } else {
         printFeedInterval = NORMAL_MODE_POLLING_INTERVAL;
       }
+#endif
+
       std::this_thread::sleep_for (std::chrono::seconds (printFeedInterval));
     }
   });
@@ -224,7 +235,9 @@ void DiscordBot::loadOnSlashCommands () {
       try {
         RSSItem item = rss.getRandomItem ();
         if (!item.title.empty ()) {
-          printStringToChannel (item.toMarkdownLink (), defaultChannelRss, event, item.embedded);
+          // Want answer in the same channel
+          printStringToChannel (item.toMarkdownLink (), event.command.channel_id, event,
+                                item.embedded);
         } else {
           LOG_W_STREAM << NO_ITEMS_IN_QUEUE << std::endl;
           event.reply (NO_ITEMS_IN_QUEUE);
@@ -246,7 +259,8 @@ void DiscordBot::loadOnSlashCommands () {
         return;
       }
       try {
-        int result = rss.addUrl (url, embedded);
+        // Add the URL to the RSS manager - use the channel ID from the command
+        int result = rss.addUrl (url, embedded, event.command.channel_id);
         if (result == -1) {
           LOG_W_STREAM << "URL already exists: " << url << std::endl;
           event.reply ("Warning: URL already exists.");
@@ -346,7 +360,9 @@ void DiscordBot::loadOnReadyCommands () {
         dpp::slashcommand ("listsources", "List all RSS sources", bot_->me.id));
 
     bot_->global_command_create (
-        dpp::slashcommand ("addsource", "Add a new RSS source", bot_->me.id)
+        dpp::slashcommand ("addsource",
+                           "Add a new RSS source + <channel_id> where command was invoked",
+                           bot_->me.id)
             .add_option (dpp::command_option (dpp::co_string, "url", "URL of the RSS feed", true))
             .add_option (dpp::command_option (dpp::co_boolean, "embedded",
                                               "Whether the feed should be embedded in the message",
@@ -387,8 +403,6 @@ int DiscordBot::printStringToChannel (const std::string& message, dpp::snowflake
     return validationResult;
   }
 
-#ifdef PUBLIC_RELEASED_DISCORD_BOT
-
   // shortening the message if it exceeds Discord's maximum length
   std::string truncatedMessage = message;
   if (truncatedMessage.size () > DISCORD_MAX_MSG_LEN) {
@@ -428,9 +442,6 @@ int DiscordBot::printStringToChannel (const std::string& message, dpp::snowflake
                                });
     });
   }
-#else
-  LOG_D_STREAM << "Fake message sent: " << truncatedMessage.substr (1, 40) << "..." << std::endl;
-#endif
   return 0;
 }
 

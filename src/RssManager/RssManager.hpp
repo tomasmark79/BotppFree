@@ -13,12 +13,12 @@
 
 struct RSSUrl {
   std::string url;
-  bool embedded;
+  bool embedded; // Whether this item should use embedded format
   uint64_t discordChannelId;
   RSSUrl () : url (""), embedded (false), discordChannelId (0) {
   }
-  RSSUrl (const std::string& u, bool e = false, uint64_t d = 0)
-      : url (u), embedded (e), discordChannelId (d) {
+  RSSUrl (const std::string& u, bool e = false, uint64_t dChId = 0)
+      : url (u), embedded (e), discordChannelId (dChId) {
   }
 };
 
@@ -57,7 +57,7 @@ public:
   // Main operations
   int initialize ();
   int fetchAllFeeds ();
-  int fetchFeed (const std::string& url, bool embedded = false);
+  int fetchFeed (const std::string& url, bool embedded = false, uint64_t discordChannelId = 0);
 
   // Item operations
   RSSItem getRandomItem ();
@@ -71,8 +71,9 @@ public:
   std::string getItemAsMarkdown (const RSSItem& item) const {
     return item.toMarkdownLink ();
   }
+
   std::string getSourcesAsList ();
-  int addUrl (const std::string& url, bool embedded);
+  int addUrl (const std::string& url, bool embedded, uint64_t discordChannelId = 0);
 
 private:
   RSSFeed feed_;
@@ -91,7 +92,7 @@ private:
   void checkAndReloadFiles ();
 
   // RSS parsing
-  RSSFeed parseRSS (const std::string& xmlData, bool embedded);
+  RSSFeed parseRSS (const std::string& xmlData, bool embedded, uint64_t discordChannelId = 0);
   std::string downloadFeed (const std::string& url);
 
   // Paths

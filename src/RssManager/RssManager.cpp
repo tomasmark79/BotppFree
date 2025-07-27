@@ -79,7 +79,7 @@ int RssManager::initialize () {
   return loadUrls () == 0 && loadSeenHashes () == 0 ? 0 : -1;
 }
 
-int RssManager::addUrl (const std::string& url, bool embedded) {
+int RssManager::addUrl (const std::string& url, bool embedded, uint64_t discordChannelId) {
   // Check if URL already exists
   for (const auto& existingUrl : urls_) {
     if (existingUrl.url == url) {
@@ -87,14 +87,16 @@ int RssManager::addUrl (const std::string& url, bool embedded) {
       return -1; // URL already exists
     }
   }
-  urls_.emplace_back (url, embedded);
+  urls_.emplace_back (url, embedded, discordChannelId);
   return saveUrls ();
 }
 
 int RssManager::saveUrls () {
   nlohmann::json jsonData = nlohmann::json::array ();
   for (const auto& url : urls_) {
-    jsonData.push_back ({ { "url", url.url }, { "embedded", url.embedded } });
+    jsonData.push_back ({ { "url", url.url },
+                          { "embedded", url.embedded },
+                          { "discordChannelId", url.discordChannelId } });
   }
   std::ofstream file (getUrlsPath ());
   if (!file.is_open ())
@@ -107,7 +109,11 @@ std::string RssManager::getSourcesAsList () {
   std::string sourcesList;
   sourcesList = "```txt\n**Available RSS Sources:**\n";
   for (const auto& url : urls_) {
-    sourcesList += "- " + url.url + (url.embedded ? " (embedded)" : " (non-embedded)") + "\n";
+    sourcesList += "- " + url.url + (url.embedded ? " (embedded)" : " (non-embedded)");
+    if (url.discordChannelId != 0) {
+      sourcesList += " [Channel: " + std::to_string (url.discordChannelId) + "]";
+    }
+    sourcesList += "\n";
   }
   sourcesList += "```";
   return sourcesList.empty () ? "No RSS sources available." : sourcesList;
@@ -124,14 +130,11 @@ int RssManager::loadUrls () {
   urls_.clear ();
   for (const auto& item : jsonData) {
     if (item.is_object () && item.contains ("url")) {
-      uint64_t discordChannelId
-          = item.contains ("discordChannelId") ? item["discordChannelId"].get<uint64_t> () : 0;
-      std::string url = item["url"].get<std::string> ();
-      bool embedded = item.contains ("embedded") ? item["embedded"].get<bool> () : false;
-      urls_.emplace_back (url, embedded, discordChannelId);
+      urls_.emplace_back (item["url"].get<std::string> (), item["embedded"].get<bool> (),
+                          item["discordChannelId"].get<uint64_t> ());
     } else if (item.is_string ()) {
       // Backwards compatibility - treat strings as non-embedded
-      urls_.emplace_back (item.get<std::string> (), false, 0);
+      urls_.emplace_back (item.get<std::string> (), false);
     }
   }
 
@@ -234,7 +237,8 @@ std::string RssManager::downloadFeed (const std::string& url) {
   return buffer;
 }
 
-RSSFeed RssManager::parseRSS (const std::string& xmlData, bool embedded) {
+RSSFeed RssManager::parseRSS (const std::string& xmlData, bool embedded,
+                              uint64_t discordChannelId) {
   RSSFeed feed;
   tinyxml2::XMLDocument doc;
   doc.Parse (xmlData.c_str ());
@@ -301,6 +305,7 @@ RSSFeed RssManager::parseRSS (const std::string& xmlData, bool embedded) {
   for (auto item = firstItem; item; item = item->NextSiblingElement (itemTag)) {
     RSSItem rssItem;
     rssItem.embedded = embedded;
+    rssItem.discordChannelId = discordChannelId;
 
     if (isAtom) {
       // Parse Atom entry
@@ -391,7 +396,7 @@ RSSFeed RssManager::parseRSS (const std::string& xmlData, bool embedded) {
   return feed;
 }
 
-int RssManager::fetchFeed (const std::string& url, bool embedded) {
+int RssManager::fetchFeed (const std::string& url, bool embedded, uint64_t discordChannelId) {
   LOG_D_STREAM << "Fetching feed: " << url << " (embedded: " << (embedded ? "true" : "false") << ")"
                << std::endl;
 
@@ -399,7 +404,7 @@ int RssManager::fetchFeed (const std::string& url, bool embedded) {
   if (xmlData.empty ())
     return -1;
 
-  RSSFeed newFeed = parseRSS (xmlData, embedded);
+  RSSFeed newFeed = parseRSS (xmlData, embedded, discordChannelId);
 
   // Create set of current hashes for fast lookup
   std::unordered_set<std::string> currentHashes;
@@ -427,7 +432,7 @@ int RssManager::fetchAllFeeds () {
   int totalItems = 0;
 
   for (const auto& rssUrl : urls_) {
-    int items = fetchFeed (rssUrl.url, rssUrl.embedded);
+    int items = fetchFeed (rssUrl.url, rssUrl.embedded, rssUrl.discordChannelId);
     if (items > 0) {
       totalItems += items;
     }
