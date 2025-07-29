@@ -130,8 +130,13 @@ int RssManager::loadUrls () {
   urls_.clear ();
   for (const auto& item : jsonData) {
     if (item.is_object () && item.contains ("url")) {
-      urls_.emplace_back (item["url"].get<std::string> (), item["embedded"].get<bool> (),
-                          item["discordChannelId"].get<uint64_t> ());
+      std::string url = item["url"].get<std::string> ();
+      bool embedded = item.contains ("embedded") ? item["embedded"].get<bool> () : false;
+      uint64_t discordChannelId = 0;
+      if (item.contains ("discordChannelId") && !item["discordChannelId"].is_null ()) {
+        discordChannelId = item["discordChannelId"].get<uint64_t> ();
+      }
+      urls_.emplace_back (url, embedded, discordChannelId);
     } else if (item.is_string ()) {
       // Backwards compatibility - treat strings as non-embedded
       urls_.emplace_back (item.get<std::string> (), false);
@@ -193,6 +198,11 @@ std::string RssManager::downloadFeed (const std::string& url) {
     if (!curl)
       return "";
 
+    // Set HTTP headers
+    struct curl_slist* headers = nullptr;
+    headers = curl_slist_append (headers, "Accept: application/rss+xml, application/xml, text/xml");
+    headers = curl_slist_append (headers, "Cache-Control: no-cache");
+    curl_easy_setopt (curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt (curl, CURLOPT_URL, url.c_str ());
     curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, WriteCallback);
     curl_easy_setopt (curl, CURLOPT_WRITEDATA, &buffer);
@@ -211,12 +221,6 @@ std::string RssManager::downloadFeed (const std::string& url) {
 
     // Accept any encoding
     curl_easy_setopt (curl, CURLOPT_ENCODING, "");
-
-    // Set HTTP headers
-    struct curl_slist* headers = nullptr;
-    headers = curl_slist_append (headers, "Accept: application/rss+xml, application/xml, text/xml");
-    headers = curl_slist_append (headers, "Cache-Control: no-cache");
-    curl_easy_setopt (curl, CURLOPT_HTTPHEADER, headers);
 
     CURLcode res = curl_easy_perform (curl);
 

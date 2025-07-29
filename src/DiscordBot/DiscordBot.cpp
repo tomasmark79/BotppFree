@@ -8,7 +8,7 @@
 #include <atomic>
 
 #define IS_TOMAS_MARK_BOT
-//#define IS_RSS_MODULE_ACTIVE
+#define IS_RSS_MODULE_ACTIVE
 #define PUBLIC_RELEASED_DISCORD_BOT
 
 const int START_SLOW_MODE_AT_HOUR = 22;           // Start slow mode at 22:00
@@ -33,6 +33,8 @@ uint64_t defaultChannelRss = 1398904149856223262;
   // Linux CZ/SK feed channel
   #define CREDITS "[Delirium](https://robctl.dev/) for bot hosting"
   #define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.bot++.key"
+  #define GEMINI_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.gemini"
+  #define GEMINI_MODEL "gemini-2.0-flash" // Use Gemini 2.0 Flash model
 uint64_t defaultChannelRss = 1375852042790244352;
 #endif
 
@@ -195,6 +197,13 @@ void DiscordBot::loadOnSlashCommands () {
 
   bot_->on_slashcommand ([&, this] (const dpp::slashcommand_t& event) {
     if (event.command.get_command_name () == "heygoogle") {
+
+      auto prompt_param = event.get_parameter ("prompt");
+      if (prompt_param.index () == 0) {
+        event.reply ("Error: Prompt parameter is required.");
+        return;
+      }
+
       std::string apiKey;
       std::string prompt = std::get<std::string> (event.get_parameter ("prompt"));
       LOG_I_STREAM << "/HeyGoogle " << prompt << std::endl;
@@ -293,6 +302,11 @@ void DiscordBot::loadOnSlashCommands () {
       }
     }
     if (event.command.get_command_name () == "addsource") {
+      auto url_param = event.get_parameter ("url");
+      if (url_param.index () == 0) { // std::monostate means parameter doesn't exist
+        event.reply ("Error: URL parameter is required.");
+        return;
+      }
       std::string url = std::get<std::string> (event.get_parameter ("url"));
 
       bool embedded = false;
@@ -322,7 +336,14 @@ void DiscordBot::loadOnSlashCommands () {
       return;
     }
     if (event.command.get_command_name () == "runterminalcommand") {
+
+      auto command_param = event.get_parameter ("command");
+      if (command_param.index () == 0) {
+        event.reply ("Error: Command parameter is required.");
+        return;
+      }
       std::string command = std::get<std::string> (event.get_parameter ("command"));
+
       // allowed commands
       if (command != "fortune" && command != "df -h" && command != "free -h"
           && command != "cat /etc/os-release" && command != "fastfetch --logo none") {
