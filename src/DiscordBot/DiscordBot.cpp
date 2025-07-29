@@ -3,11 +3,12 @@
 #include <Logger/Logger.hpp>
 #include <IBot/version.h>
 #include <RssManager/RssManager.hpp>
+#include <Llm/GoogleGemini.hpp>
 #include <thread>
 #include <atomic>
 
 #define IS_TOMAS_MARK_BOT
-
+//#define IS_RSS_MODULE_ACTIVE
 #define PUBLIC_RELEASED_DISCORD_BOT
 
 const int START_SLOW_MODE_AT_HOUR = 22;           // Start slow mode at 22:00
@@ -25,6 +26,8 @@ constexpr size_t DISCORD_MAX_MSG_LEN = 2000; // (as per Discord API docs)
   // DigitalSpace
   #define CREDITS "[DotName](https://digitalspace.name/) for bot hosting"
   #define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.botpp-supervisor.key"
+  #define GEMINI_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.gemini"
+  #define GEMINI_MODEL "gemini-2.0-flash" // Use Gemini 2.0 Flash model
 uint64_t defaultChannelRss = 1398904149856223262;
 #else
   // Linux CZ/SK feed channel
@@ -45,6 +48,8 @@ const std::string botCommandsHelp = R"(
 `/addsource` - add RSS source [RSS 1.0, 2.0, Atom]
 `/addsource url:https://www.root.cz/rss/clanky/ embedded:true`
 `/runterminalcommand` `fortune` `df -h` `free -h` `cat /etc/os-release`
+`/heygoogle` prompt: `What's the weather like today?` - ask Google Gemini AI
+
 )";
 
 const std::string botDescription
@@ -123,7 +128,9 @@ bool DiscordBot::startPollingFetchFeed () {
   std::thread pollingThreadFetchFeed ([&] () -> void {
     while (!stopPollingFetchFeed.load ()) {
       try {
+#ifdef IS_RSS_MODULE_ACTIVE
         rss.fetchAllFeeds ();
+#endif
         isPollingFetchFeedRunning.store (true);
       } catch (const std::runtime_error& e) {
         LOG_E_STREAM << "Error: " << e.what () << std::endl;
@@ -184,8 +191,47 @@ int DiscordBot::initCluster () {
 // |___/_|\__,_|___/_| |_|
 // onSlashCommands
 void DiscordBot::loadOnSlashCommands () {
+  GoogleGemini gemini;
 
   bot_->on_slashcommand ([&, this] (const dpp::slashcommand_t& event) {
+    if (event.command.get_command_name () == "heygoogle") {
+      std::string apiKey;
+      std::string prompt = std::get<std::string> (event.get_parameter ("prompt"));
+      LOG_I_STREAM << "/HeyGoogle " << prompt << std::endl;
+      event.reply ("/HeyGoogle " + prompt);
+
+      if (prompt.empty ()) {
+        event.reply ("Error: Prompt parameter is required.");
+        return;
+      }
+
+      try {
+        if (getGoogleGeminiTokenFromFile (apiKey) != 0) {
+          LOG_E_STREAM << "Failed to read Google Gemini API key from file: "
+                       << GEMINI_OAUTH_TOKEN_FILE << std::endl;
+          event.reply ("Error: Failed to read Google Gemini API key.");
+          return;
+        }
+
+        std::string response
+            = gemini.generateContentGemini (apiKey, GEMINI_MODEL, prompt + "Maximum 1900 znaků");
+        if (response.empty ()) {
+          event.reply ("Error: No response from Google Gemini.");
+          return;
+        }
+
+        std::string truncatedResponse = response.substr (0, DISCORD_MAX_MSG_LEN - 100);
+        dpp::message msg (event.command.channel_id, truncatedResponse);
+        LOG_I_STREAM << "Response from Google Gemini: " << truncatedResponse << std::endl;
+        bot_->message_create (msg);
+
+      } catch (const std::exception& e) {
+        LOG_E_STREAM << "Exception while processing /heygoogle command: " << e.what () << std::endl;
+        event.reply ("Error: " + std::string (e.what ()));
+      }
+      return;
+    }
+
     if (event.command.get_command_name () == "refetch") {
       try {
         event.reply ("Refetching all RSS feeds...");
@@ -352,6 +398,10 @@ void DiscordBot::loadOnSlashCommands () {
 void DiscordBot::loadOnReadyCommands () {
   bot_->on_ready ([&] (const dpp::ready_t& event) {
     bot_->global_command_create (
+        dpp::slashcommand ("heygoogle", "Ask Google Gemini AI", bot_->me.id)
+            .add_option (dpp::command_option (dpp::co_string, "prompt",
+                                              "The prompt to send to Google Gemini", true)));
+    bot_->global_command_create (
         dpp::slashcommand ("refetch", "Refetch all RSS feeds", bot_->me.id));
     bot_->global_command_create (
         dpp::slashcommand ("queue", "Get queue of RSS items", bot_->me.id));
@@ -505,6 +555,21 @@ int DiscordBot::printStringToChannelAsThread (const std::string& message, dpp::s
 #else // TESTING_DISCORD_BOT
   LOG_D_STREAM << "Fake thread message sent: " << message.substr (1, 40) << "..." << std::endl;
 #endif
+  return 0;
+}
+
+int DiscordBot::getGoogleGeminiTokenFromFile (std::string& token) {
+  std::ifstream tokenFile (GEMINI_OAUTH_TOKEN_FILE);
+  if (!tokenFile.is_open ()) {
+    LOG_E_STREAM << "Failed to open token file: " << GEMINI_OAUTH_TOKEN_FILE << std::endl;
+    return -1;
+  }
+  std::getline (tokenFile, token);
+  tokenFile.close ();
+  if (token.empty ()) {
+    LOG_E_STREAM << "Token file is empty or invalid." << std::endl;
+    return -1;
+  }
   return 0;
 }
 

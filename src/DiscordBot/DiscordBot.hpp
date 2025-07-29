@@ -46,6 +46,7 @@ private:
   std::string getLinuxFastfetchCpp ();
   std::string runTerminalCommand (const std::string& command);
   std::unique_ptr<dpp::cluster> bot_;
+  int getGoogleGeminiTokenFromFile (std::string& token);
   int getTokenFromFile (std::string& token);
 
   bool startPollingPrintFeed ();
