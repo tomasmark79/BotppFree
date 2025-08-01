@@ -401,7 +401,7 @@ RSSFeed RssManager::parseRSS (const std::string& xmlData, bool embedded,
 }
 
 int RssManager::fetchFeed (const std::string& url, bool embedded, uint64_t discordChannelId) {
-  LOG_D_STREAM << "Fetching feed: " << url << " (embedded: " << (embedded ? "true" : "false") << ")"
+  LOG_I_STREAM << "Fetching feed: " << url << " (embedded: " << (embedded ? "true" : "false") << ")"
                << std::endl;
 
   std::string xmlData = downloadFeed (url);
@@ -416,17 +416,21 @@ int RssManager::fetchFeed (const std::string& url, bool embedded, uint64_t disco
     currentHashes.insert (item.hash);
   }
 
-  // Add new items to main feed, but check for duplicates
+  // Add new items to main feed buffer, but check for duplicates
   int addedItems = 0;
+  int duplicateItems = 0;
   for (const auto& item : newFeed.items) {
     if (currentHashes.find (item.hash) == currentHashes.end ()) {
       feed_.addItem (item);
       currentHashes.insert (item.hash); // Update set for next iterations
       addedItems++;
+    } else {
+      duplicateItems++;
     }
   }
 
-  LOG_D_STREAM << "Added " << addedItems << " new items to feed" << std::endl;
+  LOG_I_STREAM << "Added " << addedItems << " new items to the feed buffer, skipped "
+               << duplicateItems << " duplicates." << std::endl;
   return addedItems;
 }
 

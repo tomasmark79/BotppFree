@@ -11,10 +11,10 @@
 #define IS_RSS_MODULE_ACTIVE
 #define PUBLIC_RELEASED_DISCORD_BOT
 
-const int START_SLOW_MODE_AT_HOUR = 22;           // Start slow mode at 22:00
-const int STOP_SLOW_MODE_AT_HOUR = 7;             // Stop slow mode at 07:00
+const int START_SLOW_MODE_AT_HOUR = 23;           // Start slow mode at 23:00
+const int STOP_SLOW_MODE_AT_HOUR = 6;             // Stop slow mode at 06:00
 const int SLOW_MODE_POLLING_INTERVAL = 60 * 180;  // 180 minutes (3 hours)
-const int NORMAL_MODE_POLLING_INTERVAL = 60 * 23; // 23 minutes
+const int NORMAL_MODE_POLLING_INTERVAL = 60 * 19; // 19 minutes
 const int ULTRA_FAST_POLLING_INTERVAL = 30;       // 30 seconds
 const int FEED_FETCH_INTERVAL = 60 * 60 * 2;      // 2 hours
 
