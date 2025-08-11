@@ -22,21 +22,12 @@ const std::string NO_ITEMS_IN_QUEUE = "No items in the RSS feed queue.";
 const std::string ALL_FEEDS_REFETCHED = "All RSS feeds have been refetched successfully.";
 constexpr size_t DISCORD_MAX_MSG_LEN = 2000; // (as per Discord API docs)
 
-#ifdef IS_TOMAS_MARK_BOT
-  // DigitalSpace
-  #define CREDITS "[DotName](https://digitalspace.name/) for bot hosting"
-  #define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.botpp-supervisor.key"
-  #define GEMINI_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.gemini"
-  #define GEMINI_MODEL "gemini-2.0-flash" // Use Gemini 2.0 Flash model
+// Digitální Prostor - https://discord.gg/qs6He8qnmd
+#define CREDITS "[DotName](https://digitalspace.name/) for bot hosting"
+#define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.botpp-supervisor.key"
+#define GEMINI_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.gemini"
+#define GEMINI_MODEL "gemini-2.0-flash" // Use Gemini 2.0 Flash model
 uint64_t defaultChannelRss = 1398904149856223262;
-#else
-  // Linux CZ/SK feed channel
-  #define CREDITS "[Delirium](https://robctl.dev/) for bot hosting"
-  #define DISCORD_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.bot++.key"
-  #define GEMINI_OAUTH_TOKEN_FILE "/home/tomas/.tokens/.gemini"
-  #define GEMINI_MODEL "gemini-2.0-flash" // Use Gemini 2.0 Flash model
-uint64_t defaultChannelRss = 1375852042790244352;
-#endif
 
 RssManager rss;
 

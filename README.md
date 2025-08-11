@@ -8,7 +8,7 @@ Universal Discord Bot
  - with RSS reader support
  - with Google Gemini support
   
-The bot is currently running in test mode on the largest Discord Server Linux CZ/SK - [Invitation](https://discord.gg/MBuvrRWQR6)
+The bot is currently running on [Digital Space](https://digitalspace.name/) Discord server.
 
 ### Features
 
