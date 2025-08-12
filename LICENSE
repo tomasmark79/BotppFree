@@ -21,6 +21,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 -----
+Written as DAYLEN.C, 1989-08-16
+Modified to SUNRISET.C, 1992-12-01
+(c) Paul Schlyter, 1989, 1992
+Released to the public domain by Paul Schlyter, December 1992
+
+-----
 CMake - Cross Platform Makefile Generator
 Copyright 2000-2024 Kitware, Inc. and Contributors
 All rights reserved.

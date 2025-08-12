@@ -7,7 +7,8 @@
 Universal Discord Bot
  - with RSS reader support
  - with Google Gemini support
-  
+ - sunrise & sunset times (thanks to (c) Paul Schlyter, 1989, 1992 for his C implementation)
+
 The bot is currently running on [Digital Space](https://discord.gg/qs6He8qnmd) Discord server.
 
 ### Features
@@ -18,9 +19,6 @@ The bot is currently running on [Digital Space](https://discord.gg/qs6He8qnmd) D
 - prevention of redundancy of displayed items thanks to hash function (even after program restart)
 - RSS source configuration in external file and during program runtime
  
-### ToDo
- 
-
 BotppFree is proudly built with **[D🌀tName C++ Template](https://github.com/tomasmark79/DotNameCppFree)**.
 
 ## License

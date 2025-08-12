@@ -4,6 +4,7 @@
 #include <IBot/version.h>
 #include <RssManager/RssManager.hpp>
 #include <Llm/GoogleGemini.hpp>
+#include <SunrisetC/SunrisetWorker.hpp>
 #include <thread>
 #include <atomic>
 
@@ -189,8 +190,46 @@ int DiscordBot::initCluster () {
 // onSlashCommands
 void DiscordBot::loadOnSlashCommands () {
   GoogleGemini gemini;
-
   bot_->on_slashcommand ([&, this] (const dpp::slashcommand_t& event) {
+    if (event.command.get_command_name () == "sunset"
+        || event.command.get_command_name () == "sunrise"
+        || event.command.get_command_name () == "sunriset") {
+      std::filesystem::path assetsPath = AssetContext::getAssetsPath ();
+      Params params; // new copy of memory
+      params.utcOffsetMinutes = { true, 120 };
+      params.riseOffsetMinutes = { true, 0 };
+      params.setOffsetMinutes = { true, 0 };
+
+      // Mníšek pod Brdy
+      params.lat = { true, 50.0833 };
+      params.lon = { true, 14.4167 };
+      SunrisetWorker sunrisetWorker1 (assetsPath, params);
+      std::string msg = LEFT_TXT_MARKDOWN
+                        + std::string (sunrisetWorker1.getSetTime () + " ➔ Mníšek pod Brdy\n");
+      // Praha
+      params.lat = { true, 50.0755 };
+      params.lon = { true, 14.4378 };
+      SunrisetWorker sunrisetWorker2 (assetsPath, params);
+      msg += std::string (sunrisetWorker2.getSetTime () + " ➔ Praha\n");
+      // Brno
+      params.lat = { true, 49.1951 };
+      params.lon = { true, 16.6068 };
+      SunrisetWorker sunrisetWorker3 (assetsPath, params);
+      msg += std::string (sunrisetWorker3.getSetTime () + " ➔ Brno\n");
+      // Bratislava
+      params.lat = { true, 48.1482 };
+      params.lon = { true, 17.1067 };
+      SunrisetWorker sunrisetWorker4 (assetsPath, params);
+      msg += std::string (sunrisetWorker4.getSetTime () + " ➔ Bratislava\n");
+      // Košice
+      params.lat = { true, 48.7156 };
+      params.lon = { true, 21.2611 };
+      SunrisetWorker sunrisetWorker5 (assetsPath, params);
+      msg += std::string (sunrisetWorker5.getSetTime () + " ➔ Košice\n");
+      msg += "Awesome calculator by (c) Paul Schlyter, 1989, 1992" + std::string (RIGHT_TXT_MARKDOWN);
+      event.reply (msg);
+    }
+
     if (event.command.get_command_name () == "heygoogle") {
 
       auto prompt_param = event.get_parameter ("prompt");
@@ -422,6 +461,9 @@ void DiscordBot::loadOnSlashCommands () {
 // onReadyHandlers
 void DiscordBot::loadOnReadyCommands () {
   bot_->on_ready ([&] (const dpp::ready_t& event) {
+    bot_->global_command_create (dpp::slashcommand ("sunset", "Get Sunset Now", bot_->me.id));
+    bot_->global_command_create (dpp::slashcommand ("sunrise", "Get Sunrise Now", bot_->me.id));
+    bot_->global_command_create (dpp::slashcommand ("sunriset", "Get Sunrise Time", bot_->me.id));
     bot_->global_command_create (
         dpp::slashcommand ("heygoogle", "Ask Google Gemini AI", bot_->me.id)
             .add_option (dpp::command_option (dpp::co_string, "prompt",
