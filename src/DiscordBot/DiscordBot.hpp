@@ -63,6 +63,7 @@ private:
   void addSource (const std::string& url, bool embedded);
 
   void loadOnSlashCommands ();
+  void NewFunction (std::string& sources, const dpp::slashcommand_t& event);
   int getQueueSize ();
   void loadOnReadyCommands ();
 };

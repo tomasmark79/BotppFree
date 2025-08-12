@@ -107,7 +107,7 @@ int RssManager::saveUrls () {
 
 std::string RssManager::getSourcesAsList () {
   std::string sourcesList;
-  sourcesList = "```txt\n**Available RSS Sources:**\n";
+  sourcesList = "";
   for (const auto& url : urls_) {
     sourcesList += "- " + url.url + (url.embedded ? " (embedded)" : " (non-embedded)");
     if (url.discordChannelId != 0) {
@@ -115,7 +115,6 @@ std::string RssManager::getSourcesAsList () {
     }
     sourcesList += "\n";
   }
-  sourcesList += "```";
   return sourcesList.empty () ? "No RSS sources available." : sourcesList;
 }
 

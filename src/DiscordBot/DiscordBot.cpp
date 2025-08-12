@@ -48,6 +48,9 @@ const std::string botCommandsHelp = R"(
 const std::string botDescription
     = R"(written in C++ using the [DotNameCpp](https://github.com/tomasmark79/DotNameCppFree) project template and utilizes the [DPP](https://github.com/brainboxdotcc/DPP) library for Discord API access.)";
 
+#define LEFT_TXT_MARKDOWN "```txt\n"
+#define RIGHT_TXT_MARKDOWN "\n```"
+
 DiscordBot::DiscordBot () {
   rss.initialize ();
 }
@@ -121,7 +124,8 @@ bool DiscordBot::startPollingFetchFeed () {
   std::thread pollingThreadFetchFeed ([&] () -> void {
     while (!stopPollingFetchFeed.load ()) {
       try {
-#ifdef IS_RSS_MODULE_ACTIVE
+#ifdef IS_RSS_MODULE_ACTIVEInvalid Form Body - data.content : Must be 2000 \
+    or fewer in length.(BASE_TYPE_MAX_LENGTH)
         rss.fetchAllFeeds ();
 #endif
         isPollingFetchFeedRunning.store (true);
@@ -268,12 +272,22 @@ void DiscordBot::loadOnSlashCommands () {
       }
     }
     if (event.command.get_command_name () == "listsources") {
+
       std::string sources = rss.getSourcesAsList ();
       if (sources.empty ()) {
         event.reply ("No RSS sources found.");
       } else {
-        dpp::message msg (event.command.channel_id, sources);
-        event.reply (msg);
+        size_t maxLen = DISCORD_MAX_MSG_LEN - 100;
+        if (sources.length () > maxLen) {
+          event.reply (LEFT_TXT_MARKDOWN + sources.substr (0, maxLen) + RIGHT_TXT_MARKDOWN);
+          for (size_t i = maxLen; i < sources.length (); i += maxLen) {
+            dpp::message msg (event.command.channel_id,
+                              LEFT_TXT_MARKDOWN + sources.substr (i, maxLen) + RIGHT_TXT_MARKDOWN);
+            bot_->message_create (msg);
+          }
+        } else {
+          event.reply (LEFT_TXT_MARKDOWN + sources + RIGHT_TXT_MARKDOWN);
+        }
       }
       return;
     }
@@ -350,7 +364,7 @@ void DiscordBot::loadOnSlashCommands () {
         if (output.empty ()) {
           output = "Command executed successfully, but no output was returned.";
         } else {
-          output = "```txt\n" + output + "\n```";
+          output = LEFT_TXT_MARKDOWN + output + RIGHT_TXT_MARKDOWN;
         }
         LOG_I_STREAM << "Command output: " << output << std::endl;
         printStringToChannel (output, event.command.channel_id, event, false);
@@ -390,7 +404,7 @@ void DiscordBot::loadOnSlashCommands () {
       if (envInfo.empty ()) {
         envInfo = "No environment information available.";
       } else {
-        envInfo = "```txt\n" + envInfo + "\n```";
+        envInfo = LEFT_TXT_MARKDOWN + envInfo + RIGHT_TXT_MARKDOWN;
       }
       LOG_I_STREAM << "Environment information: " << envInfo << std::endl;
       printStringToChannel (envInfo, event.command.channel_id, event, false);
@@ -523,7 +537,6 @@ std::string DiscordBot::checkThreadName (const std::string& threadName) {
 
 int DiscordBot::printStringToChannelAsThread (const std::string& message, dpp::snowflake channelId,
                                               const std::string& threadName, bool allowEmbedded) {
-
   int validationResult = isValidMessageRequest (message, channelId);
   if (validationResult != 0) {
     return validationResult;
