@@ -9,7 +9,7 @@ Universal Discord Bot
  - with Google Gemini support
  - sunrise & sunset times (thanks to (c) Paul Schlyter, 1989, 1992 for his C implementation)
 
-The bot is currently running on [Digital Space](https://discord.gg/qs6He8qnmd) Discord server.
+The bot is currently running on [Digital Space](https://discord.gg/68nXnqmuys) Discord server.
 
 ### Features
 
