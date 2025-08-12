@@ -43,6 +43,8 @@ const std::string botCommandsHelp = R"(
 `/addsource url:https://www.root.cz/rss/clanky/ embedded:true`
 `/runterminalcommand` `fortune` `df -h` `free -h` `cat /etc/os-release`
 `/heygoogle` prompt: `What's the weather like today?` - ask Google Gemini AI
+`/sunrise/sunset/sunriset` - get sunset and sunrise times for Mníšek pod Brdy, Praha, Brno, Bratislava, Košice
+`/ping` - ping pong!
 
 )";
 
