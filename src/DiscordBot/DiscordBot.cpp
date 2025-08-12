@@ -272,7 +272,6 @@ void DiscordBot::loadOnSlashCommands () {
       }
     }
     if (event.command.get_command_name () == "listsources") {
-
       std::string sources = rss.getSourcesAsList ();
       if (sources.empty ()) {
         event.reply ("No RSS sources found.");
